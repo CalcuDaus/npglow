@@ -2,16 +2,10 @@
 /**
  * NPGLOW Shared Bottom Navigation Bar (Shopee-Style)
  * Include this component at the bottom of every customer-facing page.
- * 
- * Requirements:
- * - Session must be started
- * - includes/config.php must be loaded
- * - includes/icon-helper.php must be loaded
- * 
- * Usage: Set $bottomNavActive before including this file.
- *   $bottomNavActive = 'beranda'; // beranda | belanja | pesanan | konsultasi | profil
- *   include 'includes/bottom-nav.php';
  */
+
+// Ensure icon helper is loaded
+require_once __DIR__ . '/icon-helper.php';
 
 // Only show for logged-in customers (not admin/expert)
 if (!isset($_SESSION['user_id'])) return;

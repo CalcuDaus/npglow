@@ -1,5 +1,5 @@
 > **BrainSync Context Pumper** 🧠
-> Dynamically loaded for active file: `checkout.php` (Domain: **Generic Logic**)
+> Dynamically loaded for active file: `profile.php` (Domain: **Generic Logic**)
 
 ### 📐 Generic Logic Conventions & Fixes
 - **[decision] Optimized Static — parallelizes async operations for speed**: - const CACHE_NAME = 'npglow-v1';

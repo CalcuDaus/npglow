@@ -2,6 +2,7 @@
 session_start();
 require_once 'includes/config.php';
 require_once 'includes/auth-helper.php';
+require_once 'includes/reseller-helper.php';
 
 // If already logged in, redirect based on role
 if (is_logged_in()) {
@@ -10,25 +11,42 @@ if (is_logged_in()) {
         header("Location: admin/index.php");
     } elseif ($currentRole === 'expert') {
         header("Location: expert/index.php");
+    } elseif ($currentRole === 'reseller') {
+        header("Location: reseller/index.php");
     } else {
         header("Location: dashboard.php");
     }
     exit();
 }
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $name = $_POST['name'];
-    $email = $_POST['email'];
-    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+$refQuery = trim($_GET['ref'] ?? '');
 
-    $stmt = $conn->prepare("INSERT INTO users (name, email, password) VALUES (?, ?, ?)");
-    $stmt->bind_param("sss", $name, $email, $password);
-    
-    if ($stmt->execute()) {
-        header("Location: login.php?success=1");
-        exit();
-    } else {
-        $error = "Pendaftaran gagal! Email mungkin sudah digunakan.";
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = password_hash($_POST['password'] ?? '', PASSWORD_DEFAULT);
+    $referralCode = trim($_POST['referral_code'] ?? '');
+
+    $referredBy = null;
+    if (!empty($referralCode)) {
+        $resellerStore = validate_referral_code($conn, $referralCode);
+        if ($resellerStore) {
+            $referredBy = (int)$resellerStore['user_id'];
+        } else {
+            $error = "Kode referral '{$referralCode}' tidak valid atau toko mitra tidak aktif.";
+        }
+    }
+
+    if (!isset($error)) {
+        $stmt = $conn->prepare("INSERT INTO users (name, email, password, referred_by) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("sssi", $name, $email, $password, $referredBy);
+        
+        if ($stmt->execute()) {
+            header("Location: login.php?success=1");
+            exit();
+        } else {
+            $error = "Pendaftaran gagal! Email mungkin sudah digunakan.";
+        }
     }
 }
 ?>
@@ -300,6 +318,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <svg class="w-5 h-5 eye-closed hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>
                             </button>
                         </div>
+                    </div>
+
+                    <!-- Kode Referral (Opsional) -->
+                    <div class="fade-in-up fade-in-up-delay-4">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-sm font-semibold text-gray-700">Kode Referral Toko <span class="text-xs text-gray-400 font-normal">(Opsional)</span></label>
+                            <a href="find-reseller.php" target="_blank" class="text-xs text-primary font-bold hover:underline">Cari Toko Terdekat →</a>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                            </div>
+                            <input 
+                                type="text" 
+                                name="referral_code" 
+                                id="register-referral"
+                                value="<?= htmlspecialchars($refQuery) ?>"
+                                placeholder="Contoh: NP-BDG01 (Kosongkan jika beli dari Official Store)"
+                                class="auth-input w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50/50 text-gray-800 placeholder-gray-400 focus:bg-white focus:outline-none text-sm font-mono uppercase"
+                            >
+                        </div>
+                        <p class="text-[11px] text-gray-400 mt-1">Jika diisi, katalog toko akan menyesuaikan dengan reseller pilihan Anda.</p>
                     </div>
 
                     <!-- Submit Button -->

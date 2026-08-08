@@ -4,6 +4,7 @@ require_once 'includes/config.php';
 require_once 'includes/auth-helper.php';
 require_once 'includes/order-tracking-helper.php';
 require_once 'includes/icon-helper.php';
+require_once 'includes/reseller-helper.php';
 
 // Customer only guard
 guard_customer_only();
@@ -15,6 +16,9 @@ $stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
+
+// Fetch referred reseller store if any
+$userStore = get_user_reseller_store($conn, $userId);
 
 // Stats: total orders
 $stmt = $conn->prepare("SELECT COUNT(*) as total FROM orders WHERE user_id = ? AND (status = 'completed' OR order_status = 'delivered')");
@@ -154,11 +158,34 @@ $latestPhoto = $stmt->get_result()->fetch_assoc();
     <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
 
         <!-- Greeting -->
-        <div class="mb-6" data-aos="fade-up">
-            <div class="flex items-center gap-2 mb-1">
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-800">Halo, <?= htmlspecialchars(explode(' ', $user['name'])[0]) ?>!</h1>
+        <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4" data-aos="fade-up">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-800">Halo, <?= htmlspecialchars(explode(' ', $user['name'])[0]) ?>!</h1>
+                </div>
+                <p class="text-gray-500 text-sm sm:text-base">Selamat datang kembali di NPGLOW. Apa yang ingin kamu lakukan hari ini?</p>
             </div>
-            <p class="text-gray-500 text-sm sm:text-base">Selamat datang kembali di NPGLOW. Apa yang ingin kamu lakukan hari ini?</p>
+            <div>
+                <?php if ($userStore): ?>
+                <a href="shop.php" class="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 rounded-2xl transition group shadow-xs">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <div class="text-left">
+                        <p class="text-[10px] font-bold uppercase text-emerald-800 tracking-wider">Toko Pilihan Anda</p>
+                        <p class="text-xs font-extrabold text-gray-800 group-hover:text-emerald-700"><?= htmlspecialchars($userStore['store_name']) ?> (<?= htmlspecialchars($userStore['city']) ?>)</p>
+                    </div>
+                    <svg class="w-4 h-4 text-emerald-600 ml-1 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </a>
+                <?php else: ?>
+                <a href="find-reseller.php" class="inline-flex items-center gap-2 px-3.5 py-2 bg-blue-50 hover:bg-blue-100/80 border border-blue-200 rounded-2xl transition group shadow-xs">
+                    <span class="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></span>
+                    <div class="text-left">
+                        <p class="text-[10px] font-bold uppercase text-primary tracking-wider">Official Store Pusat</p>
+                        <p class="text-xs font-extrabold text-gray-800 group-hover:text-primary">Cari Mitra Terdekat 📍</p>
+                    </div>
+                    <svg class="w-4 h-4 text-primary ml-1 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </a>
+                <?php endif; ?>
+            </div>
         </div>
 
         <?php if ($activeOrder): ?>

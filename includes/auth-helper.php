@@ -10,7 +10,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 /**
  * Get the current user's role
- * @return string|null 'user', 'admin', 'expert', or null
+ * @return string|null 'user', 'admin', 'expert', 'reseller', or null
  */
 function get_current_user_role() {
     return $_SESSION['role'] ?? null;
@@ -41,13 +41,21 @@ function is_expert_user() {
 }
 
 /**
+ * Check if the authenticated user is a Reseller
+ * @return bool
+ */
+function is_reseller_user() {
+    return is_logged_in() && (get_current_user_role() === 'reseller');
+}
+
+/**
  * Check if the user is authorized to purchase products
- * Only non-admin and non-expert users (customer/user role) are permitted.
+ * Only customer/user role is permitted. Admin, expert, and reseller cannot buy.
  * @return bool
  */
 function can_buy_products() {
     $role = get_current_user_role();
-    return $role !== 'admin' && $role !== 'expert';
+    return $role !== 'admin' && $role !== 'expert' && $role !== 'reseller';
 }
 
 /**
@@ -62,6 +70,9 @@ function guard_landing_page() {
             exit();
         } elseif ($role === 'expert') {
             header("Location: expert/index.php");
+            exit();
+        } elseif ($role === 'reseller') {
+            header("Location: reseller/index.php");
             exit();
         }
     }
@@ -88,6 +99,9 @@ function guard_customer_only($redirectIfGuest = true) {
     } elseif ($role === 'expert') {
         header("Location: expert/index.php");
         exit();
+    } elseif ($role === 'reseller') {
+        header("Location: reseller/index.php");
+        exit();
     }
 }
 
@@ -112,6 +126,9 @@ function guard_buyer_only($redirectIfGuest = true) {
     } elseif ($role === 'expert') {
         header("Location: expert/index.php?notice=buyer_only");
         exit();
+    } elseif ($role === 'reseller') {
+        header("Location: reseller/index.php?notice=buyer_only");
+        exit();
     }
 }
 
@@ -130,6 +147,16 @@ function guard_admin_only() {
  */
 function guard_expert_only() {
     if (!is_logged_in() || (!is_expert_user() && !is_admin_user())) {
+        header("Location: ../login.php");
+        exit();
+    }
+}
+
+/**
+ * Guard for Reseller Portal
+ */
+function guard_reseller_only() {
+    if (!is_logged_in() || !is_reseller_user()) {
         header("Location: ../login.php");
         exit();
     }

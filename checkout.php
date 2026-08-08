@@ -7,6 +7,7 @@ require_once 'includes/shipping-helper.php';
 require_once 'includes/settings-helper.php';
 require_once 'includes/order-tracking-helper.php';
 require_once 'includes/icon-helper.php';
+require_once 'includes/reseller-helper.php';
 
 // Strictly forbid Admin and Expert from purchasing
 guard_buyer_only();
@@ -31,6 +32,10 @@ $stmt->bind_param("i", $userId);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 
+// Check if user is associated with a reseller store
+$resellerStore = get_user_reseller_store($conn, $userId);
+$resellerStoreId = $resellerStore ? (int)$resellerStore['id'] : null;
+
 // Fetch product details
 $stmt = $conn->prepare("SELECT * FROM products WHERE id = ?");
 $stmt->bind_param("i", $productId);
@@ -40,6 +45,17 @@ $product = $stmt->get_result()->fetch_assoc();
 if (!$product) {
     header("Location: index.php");
     exit();
+}
+
+// Check if reseller has custom price
+if ($resellerStoreId) {
+    $rpStmt = $conn->prepare("SELECT custom_price FROM reseller_products WHERE reseller_store_id = ? AND product_id = ? AND is_available = 1");
+    $rpStmt->bind_param("ii", $resellerStoreId, $productId);
+    $rpStmt->execute();
+    $rpRow = $rpStmt->get_result()->fetch_assoc();
+    if ($rpRow && $rpRow['custom_price'] !== null) {
+        $product['price'] = $rpRow['custom_price'];
+    }
 }
 
 // Check if user has initial face photo
@@ -164,16 +180,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Insert order
         $insertOrder = $conn->prepare("INSERT INTO orders (
-            order_number, user_id, product_id, recipient_name, recipient_phone,
+            order_number, user_id, product_id, reseller_store_id, recipient_name, recipient_phone,
             shipping_province, shipping_city, shipping_district, shipping_postal_code,
             shipping_address, shipping_courier, shipping_service, shipping_cost,
             product_price, discount_amount, total_amount, payment_method,
             payment_bank_id, payment_status, customer_note
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)");
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)");
 
         $insertOrder->bind_param(
-            "siisssssssssddddsis",
-            $orderNumber, $userId, $productId, $recipientName, $recipientPhone,
+            "siiisssssssssddddsis",
+            $orderNumber, $userId, $productId, $resellerStoreId, $recipientName, $recipientPhone,
             $province, $city, $district, $postalCode,
             $fullAddress, $courierName, $serviceName, $shippingCost,
             $productPrice, $discountAmount, $totalAmount, $paymentMethod,
@@ -182,8 +198,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($insertOrder->execute()) {
             $newOrderId = $conn->insert_id;
+            $creatorSource = $resellerStore ? ('Toko Mitra: ' . $resellerStore['store_name']) : 'Official Store Pusat';
             // Add initial timeline event
-            add_order_tracking_log($conn, $newOrderId, 'unpaid', 'Pesanan Dibuat', 'Pesanan telah berhasil dibuat. Menunggu pembayaran dari customer.', 'Sistem NPGLOW');
+            add_order_tracking_log($conn, $newOrderId, 'unpaid', 'Pesanan Dibuat', "Pesanan telah berhasil dibuat melalui {$creatorSource}. Menunggu pembayaran dari customer.", 'Sistem NPGLOW');
             header("Location: payment.php?order_id={$newOrderId}");
             exit();
         } else {
@@ -339,14 +356,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <!-- 2. Kartu Toko & Produk -->
             <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100/80 space-y-3.5">
                 <!-- Shop Header -->
-                <div class="flex items-center gap-2 pb-2.5 border-b border-slate-100">
-                    <span class="bg-gradient-to-r from-red-500 to-orange-500 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded">
-                        Star+
-                    </span>
-                    <span class="font-bold text-xs text-slate-800">NPGLOW Official Store</span>
-                    <svg class="w-3.5 h-3.5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                    </svg>
+                <div class="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                    <div class="flex items-center gap-2">
+                        <?php if ($resellerStore): ?>
+                            <span class="bg-emerald-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                                Mitra Resmi
+                            </span>
+                            <span class="font-bold text-xs text-slate-800"><?= htmlspecialchars($resellerStore['store_name']) ?></span>
+                            <span class="text-[11px] text-slate-400 font-mono">(<?= htmlspecialchars($resellerStore['referral_code']) ?>)</span>
+                        <?php else: ?>
+                            <span class="bg-gradient-to-r from-red-500 to-orange-500 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded">
+                                Official
+                            </span>
+                            <span class="font-bold text-xs text-slate-800">NPGLOW Official Store (Pusat)</span>
+                            <svg class="w-3.5 h-3.5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
                 <!-- Product Details -->

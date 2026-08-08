@@ -75,9 +75,9 @@ $settings = get_all_settings($conn);
 $opStatus = get_expert_operational_status($conn);
 $activeDays = array_filter(array_map('intval', explode(',', $settings['expert_work_days'] ?? '1,2,3,4,5,6,7')));
 
-// Fetch Statistics
 $stats = [
     'users' => $conn->query("SELECT COUNT(*) as count FROM users WHERE role = 'user'")->fetch_assoc()['count'],
+    'resellers' => $conn->query("SELECT COUNT(*) as count FROM reseller_stores WHERE is_active = 1")->fetch_assoc()['count'] ?? 0,
     'experts' => $conn->query("SELECT COUNT(*) as count FROM users WHERE role = 'expert'")->fetch_assoc()['count'],
     'products' => $conn->query("SELECT COUNT(*) as count FROM products")->fetch_assoc()['count'],
     'orders' => $conn->query("SELECT COUNT(*) as count FROM orders")->fetch_assoc()['count'] ?? 0,
@@ -170,55 +170,65 @@ $experts = $conn->query("SELECT id, name, email, is_online, last_active, created
             </div>
 
             <!-- Stats Grid -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
                 <!-- Stat Card -->
-                <div class="bg-white rounded-2xl p-6 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center gap-4">
-                    <div class="w-14 h-14 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center flex-shrink-0">
-                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <div class="bg-white rounded-2xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 font-medium">Total Pelanggan</p>
-                        <h3 class="text-2xl font-bold text-gray-900"><?= number_format($stats['users']) ?></h3>
+                        <p class="text-xs text-gray-500 font-medium">Pelanggan</p>
+                        <h3 class="text-xl font-bold text-gray-900"><?= number_format($stats['users']) ?></h3>
+                    </div>
+                </div>
+                <!-- Stat Card - Reseller -->
+                <a href="resellers.php" class="bg-white rounded-2xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center gap-3 hover:border-teal-300 transition group">
+                    <div class="w-12 h-12 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 font-medium">Mitra Reseller</p>
+                        <h3 class="text-xl font-bold text-teal-700"><?= number_format($stats['resellers']) ?></h3>
+                    </div>
+                </a>
+                <!-- Stat Card -->
+                <div class="bg-white rounded-2xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-500 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 font-medium">Tim Ahli</p>
+                        <h3 class="text-xl font-bold text-gray-900"><?= number_format($stats['experts']) ?></h3>
                     </div>
                 </div>
                 <!-- Stat Card -->
-                <div class="bg-white rounded-2xl p-6 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center gap-4">
-                    <div class="w-14 h-14 rounded-full bg-purple-50 text-purple-500 flex items-center justify-center flex-shrink-0">
-                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                <div class="bg-white rounded-2xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 font-medium">Tim Ahli (Expert)</p>
-                        <h3 class="text-2xl font-bold text-gray-900"><?= number_format($stats['experts']) ?></h3>
+                        <p class="text-xs text-gray-500 font-medium">Total Produk</p>
+                        <h3 class="text-xl font-bold text-gray-900"><?= number_format($stats['products']) ?></h3>
                     </div>
                 </div>
                 <!-- Stat Card -->
-                <div class="bg-white rounded-2xl p-6 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center gap-4">
-                    <div class="w-14 h-14 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center flex-shrink-0">
-                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                <div class="bg-white rounded-2xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 font-medium">Total Produk</p>
-                        <h3 class="text-2xl font-bold text-gray-900"><?= number_format($stats['products']) ?></h3>
-                    </div>
-                </div>
-                <!-- Stat Card -->
-                <div class="bg-white rounded-2xl p-6 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center gap-4">
-                    <div class="w-14 h-14 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0">
-                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500 font-medium">Total Pesanan</p>
-                        <h3 class="text-2xl font-bold text-gray-900"><?= number_format($stats['orders']) ?></h3>
+                        <p class="text-xs text-gray-500 font-medium">Total Pesanan</p>
+                        <h3 class="text-xl font-bold text-gray-900"><?= number_format($stats['orders']) ?></h3>
                     </div>
                 </div>
                 <!-- Stat Card - Bank Data Foto -->
-                <a href="photos.php" class="bg-white rounded-2xl p-6 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center gap-4 hover:border-primary/50 transition group">
-                    <div class="w-14 h-14 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition">
-                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <a href="photos.php" class="bg-white rounded-2xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center gap-3 hover:border-primary/50 transition group">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 font-medium">Bank Data Foto</p>
-                        <h3 class="text-2xl font-bold text-indigo-700"><?= number_format($stats['photos']) ?></h3>
+                        <p class="text-xs text-gray-500 font-medium">Bank Data Foto</p>
+                        <h3 class="text-xl font-bold text-gray-900"><?= number_format($stats['photos']) ?></h3>
                     </div>
                 </a>
             </div>

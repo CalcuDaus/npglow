@@ -2,6 +2,7 @@
 session_start();
 require_once 'includes/config.php';
 require_once 'includes/auth-helper.php';
+require_once 'includes/reseller-helper.php';
 require_once 'includes/icon-helper.php';
 
 // Customer only guard
@@ -13,21 +14,53 @@ $userName = $_SESSION['user_name'] ?? '';
 // Search query
 $searchQuery = trim($_GET['q'] ?? '');
 
-// Fetch products
-$prodSql = "
-    SELECT p.*, COUNT(o.id) as sold_count 
-    FROM products p 
-    LEFT JOIN orders o ON p.id = o.product_id AND o.status = 'completed'
-";
-if (!empty($searchQuery)) {
-    $prodSql .= " WHERE p.name LIKE '%" . $conn->real_escape_string($searchQuery) . "%' OR p.description LIKE '%" . $conn->real_escape_string($searchQuery) . "%'";
-}
-$prodSql .= " GROUP BY p.id ORDER BY p.id DESC";
-$prodQuery = $conn->query($prodSql);
+// Get referred store if any
+$currentStore = get_user_reseller_store($conn, $userId);
+
 $products = [];
-if ($prodQuery) {
-    while ($row = $prodQuery->fetch_assoc()) {
+
+if ($currentStore) {
+    // Fetch products belonging to this reseller store
+    $sql = "
+        SELECT p.*, rp.custom_price, rp.stock as reseller_stock,
+               COALESCE(rp.custom_price, p.price) as effective_price,
+               COUNT(o.id) as sold_count
+        FROM reseller_products rp
+        JOIN products p ON rp.product_id = p.id
+        LEFT JOIN orders o ON p.id = o.product_id AND o.reseller_store_id = ? AND o.status = 'completed'
+        WHERE rp.reseller_store_id = ? AND rp.is_available = 1
+    ";
+    if (!empty($searchQuery)) {
+        $escaped = $conn->real_escape_string($searchQuery);
+        $sql .= " AND (p.name LIKE '%{$escaped}%' OR p.description LIKE '%{$escaped}%')";
+    }
+    $sql .= " GROUP BY p.id, rp.id ORDER BY rp.id DESC";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ii", $currentStore['id'], $currentStore['id']);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $row['price'] = $row['effective_price']; // override with custom price
         $products[] = $row;
+    }
+} else {
+    // Fetch from Official Store
+    $prodSql = "
+        SELECT p.*, COUNT(o.id) as sold_count 
+        FROM products p 
+        LEFT JOIN orders o ON p.id = o.product_id AND o.status = 'completed'
+    ";
+    if (!empty($searchQuery)) {
+        $escaped = $conn->real_escape_string($searchQuery);
+        $prodSql .= " WHERE p.name LIKE '%{$escaped}%' OR p.description LIKE '%{$escaped}%'";
+    }
+    $prodSql .= " GROUP BY p.id ORDER BY p.id DESC";
+    $prodQuery = $conn->query($prodSql);
+    if ($prodQuery) {
+        while ($row = $prodQuery->fetch_assoc()) {
+            $products[] = $row;
+        }
     }
 }
 ?>
@@ -36,8 +69,8 @@ if ($prodQuery) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Belanja - NPGLOW Official Store</title>
-    <meta name="description" content="Belanja produk skincare NPGLOW original, terjamin BPOM. Pilih rangkaian produk terbaik untuk kulit cantikmu.">
+    <title>Belanja - NPGLOW <?= $currentStore ? htmlspecialchars($currentStore['store_name']) : 'Official Store' ?></title>
+    <meta name="description" content="Belanja produk skincare NPGLOW original, terjamin BPOM.">
     <?php include 'includes/pwa-head.php'; ?>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -54,6 +87,7 @@ if ($prodQuery) {
         }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
     </style>
@@ -85,7 +119,55 @@ if ($prodQuery) {
     <!-- Main Content -->
     <main class="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         
-        <!-- Page Title -->
+        <!-- Store Banner / Referral Indicator -->
+        <div class="mb-5">
+            <?php if ($currentStore): ?>
+            <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-black text-lg flex-shrink-0 shadow-md shadow-emerald-500/20">
+                        <?php if (!empty($currentStore['store_logo'])): ?>
+                        <img src="<?= htmlspecialchars($currentStore['store_logo']) ?>" alt="" class="w-full h-full object-cover rounded-xl">
+                        <?php else: ?>
+                        <?= strtoupper(substr($currentStore['store_name'], 0, 1)) ?>
+                        <?php endif; ?>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full">Mitra Resmi</span>
+                            <span class="text-xs font-mono font-bold text-emerald-700"><?= htmlspecialchars($currentStore['referral_code']) ?></span>
+                        </div>
+                        <h2 class="text-sm sm:text-base font-extrabold text-gray-800 truncate"><?= htmlspecialchars($currentStore['store_name']) ?></h2>
+                        <p class="text-xs text-gray-500">📍 <?= htmlspecialchars($currentStore['city'] ?: 'Indonesia') ?> <?php if ($currentStore['whatsapp']): ?> • WA: <?= htmlspecialchars($currentStore['whatsapp']) ?><?php endif; ?></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 self-end sm:self-center">
+                    <a href="find-reseller.php" class="px-3.5 py-1.5 bg-white hover:bg-emerald-50 text-emerald-700 text-xs font-bold rounded-xl border border-emerald-200 transition shadow-sm whitespace-nowrap">
+                        Ganti Toko 📍
+                    </a>
+                    <button onclick="revertToOfficial()" class="px-3 py-1.5 bg-white/70 hover:bg-white text-gray-500 hover:text-gray-700 text-xs font-semibold rounded-xl border border-gray-200 transition whitespace-nowrap" title="Beralih ke Toko Resmi Pusat">
+                        Ke Pusat
+                    </button>
+                </div>
+            </div>
+            <?php else: ?>
+            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-500/20">
+                        <?= npglow_icon('shop-bag', 'w-5 h-5') ?>
+                    </div>
+                    <div>
+                        <h2 class="text-sm sm:text-base font-extrabold text-gray-800">NPGLOW Official Store (Pusat)</h2>
+                        <p class="text-xs text-gray-500">Mau ongkir lebih hemat & pengiriman lebih cepat?</p>
+                    </div>
+                </div>
+                <a href="find-reseller.php" class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-bold rounded-xl transition shadow-sm shadow-blue-500/20 whitespace-nowrap self-start sm:self-center">
+                    📍 Cari Toko Terdekat
+                </a>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Page Title & Count -->
         <div class="mb-4 sm:mb-6">
             <?php if (!empty($searchQuery)): ?>
                 <p class="text-sm text-gray-500">
@@ -95,7 +177,9 @@ if ($prodQuery) {
             <?php else: ?>
                 <div class="flex items-center justify-between">
                     <div>
-                        <h1 class="text-lg sm:text-xl font-extrabold text-gray-900 tracking-tight">Produk NPGLOW</h1>
+                        <h1 class="text-lg sm:text-xl font-extrabold text-gray-900 tracking-tight">
+                            <?= $currentStore ? 'Katalog Toko Mitra' : 'Katalog Produk NPGLOW' ?>
+                        </h1>
                         <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Pilih rangkaian skincare terbaik untuk kulitmu</p>
                     </div>
                     <span class="text-xs text-gray-400 font-medium"><?= count($products) ?> produk</span>
@@ -110,25 +194,30 @@ if ($prodQuery) {
                     <?= npglow_icon('shop-bag', 'w-8 h-8 text-primary') ?>
                 </div>
                 <h3 class="text-base font-bold text-gray-800 mb-1">Produk Tidak Ditemukan</h3>
-                <p class="text-sm text-gray-500 mb-4">Coba gunakan kata kunci lain untuk mencari produk.</p>
-                <a href="shop.php" class="inline-flex items-center gap-1.5 text-primary text-sm font-semibold hover:underline">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                    Lihat Semua Produk
-                </a>
+                <p class="text-sm text-gray-500 mb-4">
+                    <?= $currentStore ? 'Toko mitra ini belum menambahkan produk atau produk sedang habis.' : 'Coba gunakan kata kunci lain untuk mencari produk.' ?>
+                </p>
+                <div class="flex items-center justify-center gap-3">
+                    <?php if ($currentStore): ?>
+                    <button onclick="revertToOfficial()" class="px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary-dark transition">
+                        Belanja dari Official Store Pusat
+                    </button>
+                    <?php else: ?>
+                    <a href="shop.php" class="inline-flex items-center gap-1.5 text-primary text-sm font-semibold hover:underline">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        Lihat Semua Produk
+                    </a>
+                    <?php endif; ?>
+                </div>
             </div>
         <?php else: ?>
-            <!-- Product Grid (Same style as index.php marketplace) -->
+            <!-- Product Grid -->
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
                 <?php foreach ($products as $product): ?>
                 <div class="bg-white rounded-[1.2rem] sm:rounded-[1.5rem] shadow-[0_4px_16px_rgb(0,0,0,0.05)] hover:shadow-[0_12px_32px_rgb(0,0,0,0.1)] transition-all duration-300 overflow-hidden group flex flex-col h-full">
                     
                     <!-- Image Section -->
                     <div class="relative bg-gradient-to-br from-blue-50 to-blue-200 aspect-square flex items-center justify-center p-3 sm:p-5 overflow-hidden">
-                        <!-- Heart Icon -->
-                        <button class="absolute top-2 right-2 z-20 w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white hover:text-rose-500 transition-colors">
-                            <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-                        </button>
-                        
                         <?php if (!empty($product['image_url'])): ?>
                             <img src="<?= htmlspecialchars($product['image_url']) ?>" alt="<?= htmlspecialchars($product['name']) ?>" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 drop-shadow-lg">
                         <?php else: ?>
@@ -163,7 +252,7 @@ if ($prodQuery) {
                         <!-- Bottom Action Row -->
                         <div class="flex flex-row items-end justify-between mt-auto gap-2">
                             <div>
-                                <span class="block text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">PRICE</span>
+                                <span class="block text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">HARGA</span>
                                 <span class="text-[12px] sm:text-[14px] font-black text-gray-800 tracking-tight leading-none">Rp <?= number_format($product['price'], 0, ',', '.') ?></span>
                             </div>
                             <a href="checkout.php?product_id=<?= $product['id'] ?>"
@@ -177,6 +266,32 @@ if ($prodQuery) {
             </div>
         <?php endif; ?>
     </main>
+
+    <script>
+        function revertToOfficial() {
+            Swal.fire({
+                title: 'Beralih ke Toko Pusat?',
+                text: 'Katalog akan menampilkan produk dari Official Store Pusat.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Beralih',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#3ca6f2'
+            }).then(res => {
+                if (res.isConfirmed) {
+                    const fd = new FormData();
+                    fd.append('action', 'clear_referral');
+                    fetch('api/referral.php', { method: 'POST', body: fd })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                location.reload();
+                            }
+                        });
+                }
+            });
+        }
+    </script>
 
     <?php 
     $bottomNavActive = 'belanja';

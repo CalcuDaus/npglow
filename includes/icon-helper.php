@@ -58,6 +58,13 @@ if (!function_exists('npglow_icon')) {
                 <path d="M3 3H5.2L7.36 14.34C7.47 14.92 7.97 15.34 8.56 15.34H17.8C18.36 15.34 18.84 14.95 18.97 14.4L20.8 7.34C20.94 6.78 20.52 6.25 19.94 6.25H6" ' . ($duotone ? 'fill="currentColor" fill-opacity="0.14" ' : '') . 'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>',
 
+            // Wallet (👛/💳)
+            'wallet' => '<svg class="' . $class . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 7H4C2.89543 7 2 7.89543 2 9V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V9C22 7.89543 21.1046 7 20 7Z" ' . ($duotone ? 'fill="currentColor" fill-opacity="0.16" ' : '') . 'stroke-width="1.8" stroke-linejoin="round"/>
+                <path d="M16 3H4C2.89543 3 2 3.89543 2 5V7H20V5C20 3.89543 19.1046 3 18 3H16Z" ' . ($duotone ? 'fill="currentColor" fill-opacity="0.25" ' : '') . 'stroke-width="1.8" stroke-linejoin="round"/>
+                <circle cx="16" cy="14" r="1.5" fill="currentColor"/>
+            </svg>',
+
             // Chat / Konsultasi (💬)
             'chat' => '<svg class="' . $class . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
                 <path d="M8 12H8.01M12 12H12.01M16 12H16.01M21 12C21 16.4183 16.9706 20 12 20C10.4566 20 9.00609 19.6547 7.74549 19.0506L3 20L4.39511 16.2797C3.51221 15.0422 3 13.5739 3 12C3 7.58172 7.02944 4 12 4C16.9706 4 21 7.58172 21 12Z" ' . ($duotone ? 'fill="currentColor" fill-opacity="0.18" ' : '') . 'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>

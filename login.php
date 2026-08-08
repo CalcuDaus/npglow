@@ -10,6 +10,8 @@ if (is_logged_in()) {
         header("Location: admin/index.php");
     } elseif ($currentRole === 'expert') {
         header("Location: expert/index.php");
+    } elseif ($currentRole === 'reseller') {
+        header("Location: reseller/index.php");
     } else {
         header("Location: dashboard.php");
     }
@@ -35,6 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 header("Location: admin/index.php");
             } elseif ($row['role'] === 'expert') {
                 header("Location: expert/index.php");
+            } elseif ($row['role'] === 'reseller') {
+                header("Location: reseller/index.php");
             } else {
                 $redirect = isset($_GET['redirect']) ? urldecode($_GET['redirect']) : 'dashboard.php';
                 header("Location: " . $redirect);

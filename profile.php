@@ -4,6 +4,7 @@ require_once 'includes/config.php';
 require_once 'includes/auth-helper.php';
 require_once 'includes/order-tracking-helper.php';
 require_once 'includes/icon-helper.php';
+require_once 'includes/reseller-helper.php';
 
 // Customer only guard
 guard_customer_only();
@@ -15,6 +16,9 @@ $stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
+
+// Fetch referred store if any
+$referredStore = get_user_reseller_store($conn, $userId);
 
 // Order history
 $stmt = $conn->prepare("SELECT o.*, p.name as product_name, p.price, p.image_url FROM orders o JOIN products p ON o.product_id = p.id WHERE o.user_id = ? ORDER BY o.order_date DESC");
@@ -134,29 +138,53 @@ $initialPhoto = $stmt->get_result()->fetch_assoc();
 
         <!-- Quick Stats -->
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-8" data-aos="fade-up" data-aos-delay="100">
-            <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm text-center flex flex-col justify-center">
-                <p class="text-xl sm:text-2xl font-extrabold text-gray-800"><?= count($orders) ?></p>
-                <p class="text-xs text-gray-500 mt-1">Pesanan</p>
+            <!-- Pesanan -->
+            <div class="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100/80 shadow-sm hover:shadow-md hover:border-blue-200 transition text-center flex flex-col justify-center items-center group">
+                <div class="w-10 h-10 rounded-2xl bg-blue-50 text-primary flex items-center justify-center mb-2.5 shadow-xs group-hover:scale-105 transition-transform">
+                    <?= npglow_icon('package', 'w-5 h-5') ?>
+                </div>
+                <p class="text-xl sm:text-2xl font-extrabold text-gray-800 leading-tight"><?= count($orders) ?></p>
+                <p class="text-xs font-semibold text-gray-500 mt-1">Pesanan</p>
             </div>
-            <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm text-center flex flex-col justify-center">
-                <p class="text-xl sm:text-2xl font-extrabold text-gray-800"><?= $photoCount ?></p>
-                <p class="text-xs text-gray-500 mt-1">Foto Journal</p>
-            </div>
-            <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm text-center col-span-2 sm:col-span-1 flex flex-col justify-center items-center">
-                <p class="text-2xl font-extrabold text-primary">
+
+            <!-- Foto Journal -->
+            <div class="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100/80 shadow-sm hover:shadow-md hover:border-purple-200 transition text-center flex flex-col justify-center items-center group">
+                <div class="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mb-2.5 shadow-xs group-hover:scale-105 transition-transform">
+           <?= npglow_icon('camera', 'w-5 h-5') ?>
+    </div>
+    <p class="text-xl sm:text-2xl font-extrabold text-gray-800 leading-tight"><?= $photoCount ?></p>
+    <p class="text-xs font-semibold text-gray-500 mt-1">Foto Journal</p>
+</div>
+
+<!-- Total Belanja -->
+<div
+    class="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100/80 shadow-sm hover:shadow-md hover:border-emerald-200 transition text-center col-span-2 sm:col-span-1 flex flex-col justify-center items-center group">
+    <div
+        class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2.5 shadow-xs group-hover:scale-105 transition-transform">
+        <?= npglow_icon('wallet', 'w-5 h-5') ?>
+    </div>
+    <p class="text-xl sm:text-2xl font-extrabold text-gray-800 leading-tight">
                     Rp <?= number_format(array_sum(array_column($orders, 'price')), 0, ',', '.') ?>
                 </p>
-                <p class="text-xs text-gray-500 mt-1">Total Belanja</p>
+                <p class="text-xs font-semibold text-gray-500 mt-1">Total Belanja</p>
             </div>
         </div>
 
         <!-- Order History -->
-        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-md mb-8" data-aos="fade-up" data-aos-delay="200">
-            <div class="flex items-center justify-between mb-5">
-                <h2 class="text-lg font-extrabold text-gray-800 flex items-center gap-2">
-                    Riwayat Pembelian <?= npglow_icon('cart', 'w-5 h-5 text-primary') ?>
-                </h2>
-                <a href="my-orders.php" class="text-xs font-bold text-primary hover:underline">Lihat Semua di Pesanan Saya →</a>
+        <div class="bg-white rounded-3xl p-5 sm:p-7 border border-gray-100 shadow-md mb-8" data-aos="fade-up" data-aos-delay="200">
+            <div class="flex items-center justify-between gap-3 mb-5">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-8 h-8 rounded-xl bg-blue-50 text-primary flex items-center justify-center flex-shrink-0">
+                        <?= npglow_icon('cart', 'w-4 h-4') ?>
+                    </div>
+                    <h2 class="text-base sm:text-lg font-extrabold text-gray-800 truncate">
+                        Riwayat Pesanan
+                    </h2>
+                </div>
+                <a href="my-orders.php" class="inline-flex items-center gap-1 text-xs font-bold text-primary hover:text-primary-dark transition px-2.5 py-1.5 rounded-xl hover:bg-blue-50/80 flex-shrink-0 whitespace-nowrap">
+                    <span>Lihat Semua</span>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                </a>
             </div>
 
             <?php if (empty($orders)): ?>
@@ -166,25 +194,29 @@ $initialPhoto = $stmt->get_result()->fetch_assoc();
             </div>
             <?php else: ?>
             <div class="space-y-3">
-                <?php foreach ($orders as $order): ?>
+                <?php foreach (array_slice($orders, 0, 4) as $order): ?>
                     <?php
                         $statusMeta = get_order_status_info($order['order_status'] ?? 'unpaid', $order['payment_status'] ?? 'pending');
                         $finalTotal = (float)($order['total_amount'] ?? $order['price']);
                     ?>
-                <a href="order-tracking.php?order_id=<?= $order['id'] ?>" class="flex items-center gap-4 p-3.5 rounded-2xl bg-gray-50 hover:bg-blue-50/60 border border-transparent hover:border-blue-200 transition group block">
+                                <a href="order-tracking.php?order_id=<?= $order['id'] ?>"
+                            class="flex items-center gap-3 sm:gap-4 p-3 sm:p-3.5 rounded-2xl bg-gray-50/80 hover:bg-blue-50/60 border border-transparent hover:border-blue-200 transition group block">
                     <?php if (!empty($order['image_url'])): ?>
-                    <div class="w-14 h-14 rounded-xl overflow-hidden bg-gray-200 flex-shrink-0 shadow-sm border border-gray-100">
+                    <div
+                        class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-gray-200 flex-shrink-0 shadow-sm border border-gray-100">
                         <img src="<?= htmlspecialchars($order['image_url']) ?>" alt="" class="w-full h-full object-cover">
                     </div>
                     <?php else: ?>
-                    <div class="w-14 h-14 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
                         <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                     </div>
                     <?php endif; ?>
                     <div class="flex-1 min-w-0">
-                        <span class="text-[11px] font-mono font-bold text-gray-500 block"><?= htmlspecialchars($order['order_number'] ?? ('NP-#' . $order['id'])) ?></span>
+                        <span class="text-[10px] sm:text-[11px] font-mono font-bold text-gray-400 block"><?= htmlspecialchars($order['order_number'] ?? ('NP-#' . $order['id'])) ?></span>
                         <p class="text-xs sm:text-sm font-bold text-gray-800 truncate group-hover:text-primary transition"><?= htmlspecialchars($order['product_name']) ?></p>
-                        <p class="text-[11px] text-gray-400 mt-0.5"><?= date('d M Y, H:i', strtotime($order['order_date'])) ?> • <?= htmlspecialchars($order['shipping_courier'] ?? 'J&T') ?></p>
+                        <p class="text-[10px] sm:text-[11px] text-gray-400 mt-0.5"><?= date('d M Y, H:i', strtotime($order['order_date'])) ?> •
+                            <?= htmlspecialchars($order['shipping_courier'] ?? 'J&T') ?>
+                        </p>
                     </div>
                     <div class="text-right flex-shrink-0">
                         <p class="text-xs sm:text-sm font-extrabold text-gray-900">Rp <?= number_format($finalTotal, 0, ',', '.') ?></p>
@@ -197,6 +229,85 @@ $initialPhoto = $stmt->get_result()->fetch_assoc();
                     </div>
                 </a>
                 <?php endforeach; ?>
+            </div>
+<?php if (count($orders) > 4): ?>
+    <div class="mt-4 pt-3 border-t border-gray-100 text-center">
+        <a href="my-orders.php"
+            class="inline-flex items-center justify-center gap-1 text-xs font-bold text-primary hover:text-primary-dark transition py-1">
+            Lihat <?= count($orders) - 4 ?> Pesanan Lainnya
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+        </a>
+    </div>
+<?php endif; ?>
+            <?php endif; ?>
+        </div>
+
+        <!-- Mitra Toko / Referral Card -->
+        <div class="bg-white rounded-3xl p-6 border border-gray-100 shadow-md mb-8" data-aos="fade-up" data-aos-delay="220">
+            <div class="flex items-center justify-between gap-3 mb-4">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-extrabold text-gray-800">Toko Skincare Anda</h2>
+                        <p class="text-xs text-gray-400">Toko yang melayani pesanan skincare Anda</p>
+                    </div>
+                </div>
+                <a href="find-reseller.php" class="px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold rounded-xl transition flex items-center gap-1">
+                    <span>Cari Mitra</span>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                </a>
+            </div>
+
+            <?php if ($referredStore): ?>
+            <div class="p-4 rounded-2xl bg-gradient-to-br from-emerald-50/70 to-teal-50/50 border border-emerald-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-black text-lg flex-shrink-0 shadow-sm">
+                        <?php if (!empty($referredStore['store_logo'])): ?>
+                            <img src="<?= htmlspecialchars($referredStore['store_logo']) ?>" alt="" class="w-full h-full object-cover rounded-xl">
+                        <?php else: ?>
+                            <?= strtoupper(substr($referredStore['store_name'], 0, 1)) ?>
+                        <?php endif; ?>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-extrabold text-gray-800"><?= htmlspecialchars($referredStore['store_name']) ?></span>
+                            <span class="text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full"><?= htmlspecialchars($referredStore['referral_code']) ?></span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-0.5">📍 <?= htmlspecialchars($referredStore['city'] ?: 'Indonesia') ?> <?= $referredStore['district'] ? ', ' . htmlspecialchars($referredStore['district']) : '' ?></p>
+                        <?php if ($referredStore['whatsapp']): ?>
+                        <p class="text-xs text-emerald-600 font-semibold mt-0.5">WA: <?= htmlspecialchars($referredStore['whatsapp']) ?></p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="changeReferralModal()" class="px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-700 text-xs font-bold rounded-xl border border-emerald-200 transition shadow-xs flex-1 sm:flex-none">
+                        Ganti Kode
+                    </button>
+                    <button onclick="clearReferralStore()" class="px-3 py-2 bg-white/80 hover:bg-white text-gray-500 hover:text-gray-700 text-xs font-semibold rounded-xl border border-gray-200 transition flex-1 sm:flex-none">
+                        Ke Pusat
+                    </button>
+                </div>
+            </div>
+            <?php else: ?>
+            <div class="p-4 rounded-2xl bg-blue-50/60 border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center flex-shrink-0">
+                        <?= npglow_icon('shop-bag', 'w-5 h-5') ?>
+                    </div>
+                    <div>
+                        <p class="text-xs font-extrabold text-gray-800">NPGLOW Official Store (Pusat)</p>
+                        <p class="text-xs text-gray-500">Anda saat ini berbelanja langsung dari Pusat.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="changeReferralModal()" class="px-3.5 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-bold rounded-xl transition shadow-xs">
+                        + Masukkan Kode Mitra
+                    </button>
+                </div>
             </div>
             <?php endif; ?>
         </div>
@@ -216,7 +327,6 @@ $initialPhoto = $stmt->get_result()->fetch_assoc();
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700"><?= $photoCount ?> foto</span>
                         <svg class="w-4 h-4 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-0.5 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                     </div>
                 </a>
@@ -235,6 +345,54 @@ $initialPhoto = $stmt->get_result()->fetch_assoc();
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>AOS.init({ duration: 600, once: true });</script>
     <script>
+        async function changeReferralModal() {
+            const { value: code } = await Swal.fire({
+                title: 'Kode Referral Mitra',
+                input: 'text',
+                inputLabel: 'Masukkan kode referral reseller (Contoh: NP-BDG01)',
+                inputPlaceholder: 'NP-XXXXX',
+                showCancelButton: true,
+                cancelButtonText: 'Batal',
+                confirmButtonText: 'Terapkan',
+                confirmButtonColor: '#10b981',
+                showDenyButton: true,
+                denyButtonText: 'Cari Toko Terdekat 📍',
+                denyButtonColor: '#3ca6f2',
+                inputValidator: (v) => { if (!v) return 'Kode referral tidak boleh kosong.'; }
+            });
+
+            if (code) {
+                const fd = new FormData();
+                fd.append('action', 'set_referral');
+                fd.append('code', code.trim().toUpperCase());
+                try {
+                    const res = await fetch('api/referral.php', { method: 'POST', body: fd });
+                    const data = await res.json();
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil Terhubung!',
+                            text: `Toko berhasil diatur ke ${data.store.store_name} (${data.store.city}).`,
+                            confirmButtonColor: '#10b981'
+                        }).then(() => location.reload());
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: data.error || 'Kode tidak ditemukan.', confirmButtonColor: '#3ca6f2' });
+                    }
+                } catch(e) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal menghubungi server.', confirmButtonColor: '#3ca6f2' });
+                }
+            } else if (code === false && Swal.getDenyButton() && Swal.getDenyButton().classList.contains('swal2-deny')) {
+                // If clicked 'Cari Toko Terdekat'
+            }
+        }
+
+        // Handle deny button click (Cari Toko Terdekat)
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.classList.contains('swal2-deny')) {
+                window.location.href = 'find-reseller.php';
+            }
+        });
+
         async function editName() {
             const { value: name } = await Swal.fire({
                 title: 'Edit Nama',
