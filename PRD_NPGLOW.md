@@ -1,150 +1,78 @@
-# Product Requirements Document (PRD)
-# Landing Page & Platform NPGLOW
+# PRD: NPGLOW (Web App Skincare Terintegrasi)
 
-**Versi:** 0.1 (Draft)
-**Tanggal:** 3 Juli 2026
-**Referensi Konsep:** Halodoc (landing page & flow konsultasi)
-**Status:** Brainstorming — untuk didiskusikan & direvisi
+## 1. Ringkasan Eksekutif
+**NPGLOW** adalah platform e-commerce dan telehealth spesifik untuk produk skincare. Platform ini menggabungkan pengalaman belanja online dengan konsultasi kulit profesional (Tim Ahli) serta AI Assistant yang cerdas. 
 
----
+Berbeda dengan platform e-commerce biasa, NPGLOW memiliki fitur *Skincare Journal* dan sistem konsultasi terbuka untuk semua pengguna (baik yang sudah membeli maupun belum), sehingga pengguna dapat mendiskusikan kondisi kulit mereka sebelum atau setelah pembelian.
 
-## 1. Latar Belakang & Tujuan
+## 2. Tujuan & Lingkup Proyek
+### 2.1 Tujuan
+- Membangun *brand awareness* dan kepercayaan untuk NPGLOW melalui konsultasi profesional dan teknologi AI.
+- Memfasilitasi transaksi pembelian produk secara langsung.
+- Memberikan wadah (*Skincare Journal*) bagi pelanggan untuk melacak perkembangan (*progress*) kulit mereka.
 
-NPGLOW adalah brand yang membutuhkan landing page dengan konsep mirip Halodoc: informatif, terpercaya, dan mengarahkan user ke dua aksi utama:
-
-1. **Konsultasi/chat** dengan syarat sudah pernah membeli produk NPGLOW.
-2. **Belanja produk** melalui marketplace yang ditampilkan di landing page.
-
-Tujuan utama dokumen ini adalah menyepakati scope, arsitektur teknis, dan struktur halaman sebelum masuk ke tahap desain/development.
-
----
-
-## 2. Target Tech Stack
-
-Karena target hosting adalah **shared hosting murah**, stack dipilih agar ringan dan kompatibel:
-
-| Layer | Pilihan | Alasan |
-|---|---|---|
-| Bahasa Backend | **PHP native / PHP + framework ringan** (mis. CodeIgniter 4 atau Laravel 10/11 jika hosting support) | Kompatibel shared hosting, dokumentasi luas |
-| Database | **MySQL / MariaDB** | Default di hampir semua shared hosting (cPanel) |
-| Frontend | HTML + CSS (Tailwind/Bootstrap) + JS (vanilla / jQuery) | Ringan, tidak butuh build tool khusus di server |
-| Flash Message | **SweetAlert2** | Sesuai requirement |
-| Realtime Chat | Polling AJAX (interval) atau **Pusher/Ably (free tier)** jika butuh realtime, karena WebSocket native sulit di shared hosting | Shared hosting umumnya tidak support long-running socket server |
-| File/Asset Storage | Folder lokal di hosting (`/uploads`) | Hemat biaya, tanpa cloud storage tambahan |
-| Payment Gateway | Midtrans / Xendit (untuk transaksi marketplace) | Umum dipakai di Indonesia, mendukung berbagai metode pembayaran |
-
-> **Catatan:** Jika nanti butuh chat realtime penuh (WebSocket), perlu VPS minimal — bisa jadi fase 2. Untuk MVP di shared hosting, polling AJAX tiap beberapa detik sudah cukup.
+### 2.2 Lingkup (MVP)
+1. **Landing Page:** Halaman depan yang estetik, menampilkan katalog produk (Marketplace) dan CTA menuju fitur Konsultasi.
+2. **Autentikasi:** Sistem login dan registrasi berbasis *session* menggunakan PHP native.
+3. **PWA (Progressive Web App):** Dukungan instalasi aplikasi di *smartphone* dengan halaman fallback offline yang menarik.
+4. **Marketplace/Checkout:** Menampilkan produk (harga, gambar, dll), integrasi keranjang, dan proses *checkout* (integrasi *payment gateway* / manual transfer).
+5. **Consultation Hub (Sistem Terbuka):**
+   - **AI Assistant:** Chat 24/7 dengan dukungan Google Gemini (RAG) menggunakan Knowledge Base khusus NPGLOW.
+   - **Chat Tim Ahli:** Chat real-time berbasis AJAX polling untuk konsultasi mendalam dengan ahli.
+6. **Skincare Journal:** Fitur pendukung chat di mana pengguna dapat mengunggah foto wajah untuk dianalisa.
+7. **Dashboard Admin/Expert:** Mengelola chat masuk, status produk, status pengguna (Pelanggan / Calon Pelanggan), dan pesanan.
 
 ---
 
-## 3. Struktur Halaman Landing Page (mengacu Halodoc)
+## 3. Fitur Utama
 
-### 3.1 Header / Navbar
-- Logo NPGLOW
-- Menu: Produk, Tentang, Konsultasi, (opsional: Artikel/Edukasi)
-- Tombol **Masuk / Daftar**
+### 3.1 PWA (Progressive Web App)
+- Dukungan *Service Worker* (`sw.js`) untuk caching halaman dan *assets*.
+- *Install Prompt* pintar di *navbar* (Hanya muncul jika belum diinstal).
+- Halaman `offline.html` bermerek NPGLOW ketika koneksi internet terputus.
 
-### 3.2 Hero Section
-- Headline utama (value proposition NPGLOW)
-- CTA utama: "Konsultasi Sekarang" & "Belanja Produk"
-- Ilustrasi/gambar produk atau chat mockup (mirip mockup "HILDA" di Halodoc)
+### 3.2 Consultation Hub (Halodoc Style)
+- **Tersedia Untuk Semua Pengguna:** Baik pelanggan maupun calon pelanggan dapat mengakses fitur ini (tanpa gerbang pembelian).
+- **Pilihan Mode Konsultasi (`konsultasi.php`):**
+  - **AI Assistant:** Bot dengan RAG yang memberikan respons seputar skincare dan produk NPGLOW. Terbatas pada pengetahuan yang di-*inject* melalui `knowledge-base.json`.
+  - **Chat Tim Ahli:** Mode komunikasi langsung dengan admin/expert. Hub menampilkan badge status (Online / Offline) dari Tim Ahli secara dinamis.
 
-### 3.3 Section "Kenapa Konsultasi di NPGLOW"
-- Value proposition: legit/BPOM, direspons cepat, dst. (isi menyesuaikan brand)
-- Badge kepercayaan (jika ada — misal sertifikasi produk)
+### 3.3 Live Chat Real-Time (AJAX)
+- Menggunakan *AJAX long-polling* ringan agar tidak membebani server *shared hosting*.
+- Mendukung pengiriman teks dan gambar (*Skincare Journal*).
 
-### 3.4 Section Konsultasi (Chat)
-- Penjelasan singkat cara kerja
-- **Gate/syarat:** tombol "Mulai Konsultasi" → cek status pembelian user
-  - Jika **belum pernah beli** → SweetAlert info + CTA ke marketplace
-  - Jika **sudah pernah beli** → redirect ke halaman/chat konsultasi
+### 3.4 Marketplace & Order Management
+- Menampilkan produk dengan deskripsi, *ingredients*, dan kecocokan jenis kulit.
+- Manajemen *cart* (keranjang) dan proses pemesanan.
+- *Tagging* pengguna: Saat pesanan valid/selesai, sistem mencatat status `has_purchased = true` di profil pengguna.
 
-### 3.5 Marketplace Section (bagian bawah landing page)
-- Grid/list produk NPGLOW (gambar, nama, harga, tombol "Beli"/"+Keranjang")
-- Filter/kategori produk (opsional untuk MVP)
-- Link "Lihat Semua Produk" → halaman katalog penuh
-
-### 3.6 Footer
-- Info brand, kontak, sosial media, disclaimer (jika produk kesehatan/skincare perlu disclaimer BPOM dll.)
+### 3.5 Dashboard Expert / Admin
+- Menampilkan daftar pengguna yang sedang butuh konsultasi.
+- **Badge Status:** Membedakan pengguna yang sudah beli produk (*Pelanggan*) dan yang belum (*Calon Pelanggan*).
+- *Ping/Heartbeat System:* Memastikan status *Online* Tim Ahli selalu *up-to-date*.
 
 ---
 
-## 4. Flow Utama
-
-### 4.1 Flow Registrasi/Login
-1. User daftar (email/no HP + password) atau login.
-2. Verifikasi (OTP/email) — opsional untuk MVP awal, bisa disederhanakan dulu.
-
-### 4.2 Flow Pembelian Produk (Marketplace)
-1. User pilih produk → tambah ke keranjang.
-2. Checkout → isi alamat → pilih metode pembayaran.
-3. Setelah pembayaran **berhasil**, sistem mencatat `has_purchased = true` pada akun user (atau menyimpan riwayat order yang bisa dicek).
-4. SweetAlert konfirmasi: "Pembayaran berhasil! Kamu sekarang bisa konsultasi."
-
-### 4.3 Flow Konsultasi (Chat) — *placeholder, detail menyusul dari user*
-1. User klik "Mulai Konsultasi".
-2. Sistem cek: apakah user punya minimal 1 riwayat pembelian **valid** (status paid/selesai)?
-   - **Tidak** → SweetAlert: "Konsultasi hanya untuk pembeli produk NPGLOW" + tombol ke marketplace.
-   - **Ya** → lanjut ke halaman chat (pilih admin/CS yang online, atau auto-assign).
-3. *(Detail lanjutan flow chat akan ditentukan oleh user — misalnya: apakah 1x beli = 1x jatah konsultasi, atau unlimited selama pernah beli, ada batas waktu, dsb.)*
-
-> Poin ini akan diperbarui begitu detail flow dari kamu tersedia — beberapa hal yang perlu dipastikan nanti:
-> - Apakah konsultasi berlaku selamanya setelah 1x beli, atau per-produk/per-order?
-> - Siapa yang menjawab chat: admin manual, dokter/CS, atau bot dulu?
-> - Apakah ada limit jumlah/durasi konsultasi per user?
+## 4. Stack Teknologi
+- **Backend:** PHP Native (Minimal 8.0)
+- **Frontend:** HTML5, CSS3, JavaScript (Vanilla), Tailwind CSS, SweetAlert2, AOS (Animate on Scroll).
+- **Database:** MySQL / MariaDB (Driver `mysqli`)
+- **AI Integration:** Google Gemini API (v1beta / Free Tier)
 
 ---
 
-## 5. Modul/Fitur Sistem (Draft)
+## 5. Skema Database
 
-| Modul | Deskripsi |
-|---|---|
-| Auth | Register, Login, Logout, Reset Password |
-| Produk & Marketplace | List produk, detail produk, kategori, keranjang, checkout |
-| Order & Payment | Riwayat order, status pembayaran, integrasi payment gateway |
-| Konsultasi/Chat | Validasi syarat beli, ruang chat, riwayat chat |
-| Admin Panel | Kelola produk, kelola order, kelola chat/CS, kelola user |
-| Notifikasi | SweetAlert (client-side flash message), email/WA notifikasi order (opsional) |
+- `users`: Data pengguna (id, name, email, password, role, is_online, last_active, has_purchased, created_at)
+- `products`: Katalog produk NPGLOW.
+- `ai_chats`: Riwayat obrolan AI per pengguna (id, user_id, sender, message, created_at).
+- `consultation_messages`: Riwayat chat dengan Tim Ahli (termasuk unggahan gambar).
+- `orders`: Data transaksi pembelian.
 
 ---
 
-## 6. Database (Draft Skema Tingkat Tinggi)
-
-- `users` (id, nama, email, no_hp, password, role, created_at)
-- `products` (id, nama, deskripsi, harga, stok, gambar, kategori_id)
-- `categories` (id, nama)
-- `orders` (id, user_id, total, status, created_at)
-- `order_items` (id, order_id, product_id, qty, harga)
-- `consultations` (id, user_id, admin_id, status, created_at)
-- `consultation_messages` (id, consultation_id, sender_id, pesan, created_at)
-
-> Skema ini masih kasar, perlu disesuaikan begitu flow konsultasi final.
-
----
-
-## 7. Non-Functional Requirements
-
-- **Performance:** ringan untuk shared hosting (hindari query berat, gunakan cache sederhana jika perlu).
-- **Security:** hashing password (bcrypt), proteksi SQL Injection (prepared statement/ORM), validasi input, CSRF token di form.
-- **Responsif:** mobile-first, karena traffic kesehatan biasanya dominan mobile.
-- **SEO dasar:** meta title/description tiap halaman produk & artikel.
-
----
-
-## 8. Yang Masih Perlu Diputuskan (Open Questions)
-
-1. Detail lengkap flow chat konsultasi (siapa yang balas, batasan, dsb.) — akan disusun user.
-2. Apakah butuh fitur artikel/edukasi kesehatan seperti "Kamus Kesehatan A-Z" di Halodoc, atau cukup landing + marketplace + chat saja untuk MVP?
-3. Payment gateway mana yang akan dipakai (Midtrans/Xendit/lainnya)?
-4. Apakah perlu app mobile juga, atau web-only dulu?
-5. Branding: warna, logo, tone komunikasi NPGLOW (biar desain landing page konsisten)?
-
----
-
-## 9. Next Steps
-
-1. Finalisasi flow konsultasi (dari user).
-2. Buat wireframe/mockup landing page (Figma atau langsung HTML draft).
-3. Breakdown modul di atas menjadi task development per sprint.
-4. Setup environment PHP di shared hosting (pilih framework: native/CodeIgniter/Laravel).
-
+## 6. Deployment & Hosting
+Sistem dirancang sedemikian rupa sehingga:
+- Dapat berjalan dengan baik di *Shared Hosting* (cPanel, dll) tanpa memerlukan Node.js atau WebSocket.
+- RAG AI diproses di sisi server PHP menggunakan *cURL* ke API Gemini Google, sehingga API Key aman.
+- Fitur *Polling* dioptimalkan sedemikian rupa agar beban *database* minimal.

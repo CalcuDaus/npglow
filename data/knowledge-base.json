@@ -1,0 +1,82 @@
+{
+    "brand": {
+        "name": "NPGLOW",
+        "tagline": "Perawatan Kulit Terbaik Di Tangan Ahlinya",
+        "description": "NPGLOW adalah brand skincare lokal Indonesia yang menyediakan produk perawatan kulit berkualitas tinggi dengan sertifikasi BPOM. Semua produk telah teruji klinis dan aman digunakan.",
+        "certifications": ["BPOM", "Teruji Klinis", "Halal"]
+    },
+    "products": [
+        {
+            "id": 1,
+            "name": "NP Glow Acne Package",
+            "price": 150000,
+            "description": "Paket perawatan wajah khusus untuk kulit berjerawat. Membantu mengurangi jerawat, mengontrol minyak berlebih, dan mencerahkan bekas jerawat.",
+            "skin_type": ["berminyak", "berjerawat", "kombinasi"],
+            "benefits": [
+                "Mengurangi jerawat aktif",
+                "Mengontrol produksi minyak berlebih",
+                "Memudarkan bekas jerawat",
+                "Membersihkan pori-pori tersumbat"
+            ],
+            "key_ingredients": ["Salicylic Acid", "Niacinamide", "Tea Tree Oil", "Centella Asiatica"],
+            "usage": "Gunakan secara rutin pagi dan malam. Bersihkan wajah → toner → serum → moisturizer."
+        },
+        {
+            "id": 2,
+            "name": "NP Glow Whitening Package",
+            "price": 175000,
+            "description": "Paket perawatan wajah untuk mencerahkan kulit kusam dan meratakan warna kulit. Cocok untuk kulit yang ingin tampil lebih cerah dan glowing.",
+            "skin_type": ["normal", "kusam", "kering", "kombinasi"],
+            "benefits": [
+                "Mencerahkan kulit kusam",
+                "Meratakan warna kulit",
+                "Melembapkan kulit",
+                "Memberikan efek glowing alami"
+            ],
+            "key_ingredients": ["Alpha Arbutin", "Vitamin C", "Hyaluronic Acid", "Glutathione"],
+            "usage": "Gunakan secara rutin pagi dan malam. Bersihkan wajah → toner → serum → moisturizer → sunscreen (pagi)."
+        }
+    ],
+    "faq": [
+        {
+            "question": "Bagaimana cara mengetahui tipe kulit saya?",
+            "answer": "Cara mudahnya: cuci wajah, tunggu 30 menit tanpa skincare. Jika wajah terasa kencang dan kering → kulit kering. Jika seluruh wajah berminyak → kulit berminyak. Jika berminyak di T-zone saja (dahi, hidung, dagu) → kulit kombinasi. Jika normal tanpa masalah berarti → kulit normal."
+        },
+        {
+            "question": "Produk NPGLOW mana yang cocok untuk kulit berjerawat?",
+            "answer": "Untuk kulit berjerawat, kami merekomendasikan Acne Glow Package yang mengandung Salicylic Acid dan Tea Tree Oil untuk membantu mengatasi jerawat aktif dan mengontrol minyak."
+        },
+        {
+            "question": "Produk NPGLOW mana yang cocok untuk kulit kusam?",
+            "answer": "Untuk kulit kusam yang ingin lebih cerah, kami merekomendasikan Whitening Glow Package yang mengandung Alpha Arbutin dan Vitamin C untuk mencerahkan dan meratakan warna kulit."
+        },
+        {
+            "question": "Apakah produk NPGLOW aman digunakan?",
+            "answer": "Ya! Semua produk NPGLOW sudah terdaftar di BPOM dan telah teruji klinis. Kami menggunakan bahan-bahan yang aman dan berkualitas tinggi."
+        },
+        {
+            "question": "Berapa lama hasil bisa terlihat?",
+            "answer": "Umumnya, perbaikan kulit mulai terlihat setelah 2-4 minggu penggunaan rutin. Namun, hasil optimal biasanya terlihat setelah 1-3 bulan penggunaan konsisten. Setiap kulit berbeda, jadi hasilnya bisa bervariasi."
+        },
+        {
+            "question": "Apakah bisa konsultasi sebelum membeli?",
+            "answer": "Tentu! Di NPGLOW, kamu bisa konsultasi gratis kapan saja — bahkan sebelum membeli produk. Kamu bisa chat dengan AI Assistant kami 24 jam atau langsung dengan Tim Ahli saat mereka online."
+        },
+        {
+            "question": "Bagaimana urutan pemakaian skincare yang benar?",
+            "answer": "Urutan yang benar: 1) Cleanser/Pembersih 2) Toner 3) Serum 4) Moisturizer 5) Sunscreen (pagi hari saja). Tunggu 1-2 menit antar produk agar menyerap sempurna."
+        },
+        {
+            "question": "Apakah harus pakai sunscreen setiap hari?",
+            "answer": "Ya! Sunscreen adalah langkah skincare paling penting. Gunakan setiap pagi, bahkan saat mendung atau di dalam ruangan, karena sinar UV bisa menembus awan dan kaca jendela. Gunakan SPF minimal 30."
+        }
+    ],
+    "skincare_tips": [
+        "Selalu bersihkan wajah sebelum tidur, jangan tidur dengan makeup!",
+        "Minum air putih minimal 8 gelas sehari untuk menjaga kelembapan kulit dari dalam.",
+        "Jangan memencet jerawat karena bisa menyebabkan infeksi dan bekas yang sulit hilang.",
+        "Ganti sarung bantal secara rutin (minimal seminggu sekali) untuk menghindari bakteri penyebab jerawat.",
+        "Selalu gunakan sunscreen setiap pagi, bahkan saat di dalam ruangan.",
+        "Hindari menyentuh wajah terlalu sering karena tangan bisa membawa bakteri."
+    ]
+}

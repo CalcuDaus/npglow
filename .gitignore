@@ -13,3 +13,12 @@ CLAUDE.md
 .windsurfrules
 .gemini/
 .cline/
+
+/light-able-bootstrap-vanilla-js-stage-v1.2.0
+
+# Local configurations & secrets
+includes/config.local.php
+config.local.php
+*.local.php
+.env
+.env.*

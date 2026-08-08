@@ -1,7 +1,7 @@
 
 
 # Project Memory — npglow
-> 19 notes | Score threshold: >40
+> 31 notes | Score threshold: >40
 
 ## Safety — Never Run Destructive Commands
 
@@ -18,16 +18,28 @@
 
 **Stack:** JavaScript
 
+## Active: `.`
+
+- **Optimized Static — parallelizes async operations for speed**
+- **convention in .gitignore**
+- **convention in .gitignore**
+- **convention in .gitignore**
+- **convention in .gitignore**
+
 ## Project Standards
 
 - convention in .gitignore
-- Version your API from day 1 (/api/v1/)
-- Use consistent response format across all endpoints
-- Implement soft delete for important data — don't hard delete without confirmation
-- Handle timezone correctly — store UTC, display in user's timezone
-- Make layouts responsive from the start — mobile-first approach
-- Disable submit button during form submission — prevent double-submit
-- Always add empty states ("No items yet" with call-to-action)
+- convention in .gitignore
+- convention in .gitignore
+- convention in .gitignore
+- convention in .gitignore
+- convention in .gitignore
+- convention in .gitignore
+- convention in .gitignore
+
+## Recent Decisions
+
+- Optimized Static — parallelizes async operations for speed
 
 ## Verified Best Practices
 

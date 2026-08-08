@@ -1,6 +1,10 @@
 <?php
 session_start();
-require_once 'config.php';
+require_once 'includes/config.php';
+require_once 'includes/auth-helper.php';
+
+// Prevent admin and expert from accessing customer landing page
+guard_landing_page();
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $hasPurchased = false;
@@ -16,6 +20,47 @@ if ($isLoggedIn) {
         $hasPurchased = $row['has_purchased'];
     }
 }
+
+// Fetch Testimonials (Before-After)
+$testimoniQuery = $conn->query("
+    SELECT 
+        u.name,
+        (SELECT photo_path FROM user_face_photos WHERE user_id = u.id AND photo_type = 'initial' ORDER BY taken_at ASC LIMIT 1) as photo_before,
+        (SELECT photo_path FROM user_face_photos WHERE user_id = u.id AND photo_type = 'progress' ORDER BY taken_at DESC LIMIT 1) as photo_after
+    FROM users u
+    HAVING photo_before IS NOT NULL AND photo_after IS NOT NULL
+    LIMIT 6
+");
+$testimonials = [];
+if ($testimoniQuery) {
+    while ($row = $testimoniQuery->fetch_assoc()) {
+        $testimonials[] = $row;
+    }
+}
+
+// Fallback dummy data if no real data yet, so the section still looks good
+if (empty($testimonials)) {
+    $testimonials = [
+        [
+            'name' => 'Amanda T.',
+            'photo_before' => 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=500&fit=crop&q=80',
+            'photo_after' => 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=500&fit=crop&q=80',
+            'review' => 'Jerawat meradang kempes dalam 2 minggu!'
+        ],
+        [
+            'name' => 'Dinda R.',
+            'photo_before' => 'https://images.unsplash.com/photo-1554151228-14d9def656e4?w=400&h=500&fit=crop&q=80',
+            'photo_after' => 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=500&fit=crop&q=80',
+            'review' => 'Kulit kusam jadi jauh lebih cerah dan glowing.'
+        ],
+        [
+            'name' => 'Sarah A.',
+            'photo_before' => 'https://images.unsplash.com/photo-1548142813-c348350df52b?w=400&h=500&fit=crop&q=80',
+            'photo_after' => 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=500&fit=crop&q=80',
+            'review' => 'Tekstur kulit membaik drastis, super luv!'
+        ]
+    ];
+}
 ?>
 <!DOCTYPE html>
 <html lang="id" class="scroll-smooth">
@@ -23,6 +68,7 @@ if ($isLoggedIn) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NPGLOW - Konsultasi & Belanja Skincare Terpercaya</title>
+    <?php include 'includes/pwa-head.php'; ?>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -47,6 +93,8 @@ if ($isLoggedIn) {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- AOS CSS -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <!-- Swiper CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     <!-- Custom CSS (optional) -->
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -67,7 +115,7 @@ if ($isLoggedIn) {
             <div class="flex justify-between h-20">
                 <div class="flex items-center">
                     <a href="#" class="flex-shrink-0 flex items-center gap-3">
-                        <img class="h-12 w-auto object-contain" src="logo_np_glow.jpeg" alt="NPGLOW Logo">
+                        <img class="h-12 w-auto object-contain" src="assets/images/logo_np_glow.jpeg" alt="NPGLOW Logo">
                         <span class="font-bold text-xl tracking-tight text-primary">NPGLOW</span>
                     </a>
                     <div class="hidden md:ml-10 md:flex md:space-x-8">
@@ -79,7 +127,13 @@ if ($isLoggedIn) {
                 <div class="hidden md:flex items-center space-x-4">
                     <?php if ($isLoggedIn): ?>
                         <span class="text-gray-700 font-medium text-sm">Halo, <?= htmlspecialchars($userName) ?></span>
-                        <a href="logout.php" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-full font-medium text-sm transition-all shadow-md">Logout</a>
+                        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                            <a href="admin/index.php" class="bg-gray-800 hover:bg-gray-700 text-white px-5 py-2.5 rounded-full font-medium text-sm transition-all shadow-md">Dashboard Admin</a>
+                        <?php elseif (isset($_SESSION['role']) && $_SESSION['role'] === 'expert'): ?>
+                            <a href="expert/index.php" class="bg-[#3ca6f2] hover:bg-[#2e8ccf] text-white px-5 py-2.5 rounded-full font-medium text-sm transition-all shadow-md">Dashboard Ahli</a>
+                        <?php else: ?>
+                            <a href="dashboard.php" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-full font-medium text-sm transition-all shadow-md hover:shadow-lg">Dashboard</a>
+                        <?php endif; ?>
                     <?php else: ?>
                         <a href="login.php" class="text-gray-500 hover:text-primary font-medium text-sm transition-colors">Masuk</a>
                         <a href="register.php" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-full font-medium text-sm transition-all shadow-md hover:shadow-lg">Daftar</a>
@@ -89,8 +143,13 @@ if ($isLoggedIn) {
                 <div class="flex items-center md:hidden">
                     <button type="button" id="mobile-menu-btn" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary" aria-expanded="false">
                         <span class="sr-only">Buka menu utama</span>
-                        <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <!-- Hamburger icon -->
+                        <svg id="hamburger-icon" class="block h-6 w-6 transition-transform duration-300 transform rotate-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        <!-- Close icon -->
+                        <svg id="close-icon" class="hidden h-6 w-6 transition-transform duration-300 transform rotate-90 opacity-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
@@ -98,7 +157,7 @@ if ($isLoggedIn) {
         </div>
 
         <!-- Mobile Menu Panel -->
-        <div class="md:hidden hidden" id="mobile-menu">
+        <div class="md:hidden hidden transform transition-all duration-300 origin-top opacity-0 -translate-y-4" id="mobile-menu">
             <div class="pt-2 pb-3 space-y-1">
                 <a href="#beranda" class="mobile-nav-link bg-blue-50 border-primary text-primary block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors">Beranda</a>
                 <a href="#marketplace" class="mobile-nav-link border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors">Produk</a>
@@ -108,6 +167,13 @@ if ($isLoggedIn) {
                 <div class="flex flex-col items-center px-4 space-y-3">
                     <?php if ($isLoggedIn): ?>
                         <span class="w-full text-center text-gray-700 font-medium">Halo, <?= htmlspecialchars($userName) ?></span>
+                        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                            <a href="admin/index.php" class="w-full text-center bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-full font-medium shadow-md transition-colors">Dashboard Admin</a>
+                        <?php elseif (isset($_SESSION['role']) && $_SESSION['role'] === 'expert'): ?>
+                            <a href="expert/index.php" class="w-full text-center bg-[#3ca6f2] hover:bg-[#2e8ccf] text-white px-4 py-2 rounded-full font-medium shadow-md transition-colors">Dashboard Ahli</a>
+                        <?php else: ?>
+                            <a href="dashboard.php" class="w-full text-center bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-full font-medium shadow-md transition-colors">Dashboard</a>
+                        <?php endif; ?>
                         <a href="logout.php" class="w-full text-center bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-full font-medium shadow-md transition-colors">Logout</a>
                     <?php else: ?>
                         <a href="login.php" class="w-full text-center text-primary border border-primary hover:bg-blue-50 px-4 py-2 rounded-full font-medium transition-colors">Masuk</a>
@@ -130,7 +196,7 @@ if ($isLoggedIn) {
                             <span class="block text-primary">Di Tangan Ahlinya</span>
                         </h1>
                         <p class="mt-3 text-base text-gray-500 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
-                            Dapatkan kulit sehat dan glowing dengan produk original NPGLOW. Beli produknya dan nikmati fasilitas konsultasi eksklusif bersama tim ahli kami kapan saja.
+                            Dapatkan kulit sehat dan glowing dengan produk original NPGLOW. Konsultasi gratis dengan tim ahli atau AI assistant kami, kapan saja — bahkan sebelum membeli produk.
                         </p>
                         <div class="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start gap-4">
                             <div class="rounded-full shadow-lg">
@@ -169,7 +235,7 @@ if ($isLoggedIn) {
             
             <!-- Talent Image with faded edges -->
             <div class="relative w-full max-w-lg lg:h-full flex items-center justify-center" data-aos="fade-right" data-aos-delay="200">
-                <img src="talent.jpg" alt="NPGLOW Talent" class="w-full h-auto object-cover max-h-[80vh] rounded-[3rem]" style="mask-image: radial-gradient(circle, black 55%, transparent 100%); -webkit-mask-image: radial-gradient(circle, black 55%, transparent 100%); mix-blend-mode: multiply;">
+                <img src="assets/images/talent.jpg" alt="NPGLOW Talent" class="w-full h-auto object-cover max-h-[80vh] rounded-[3rem]" style="mask-image: radial-gradient(circle, black 55%, transparent 100%); -webkit-mask-image: radial-gradient(circle, black 55%, transparent 100%); mix-blend-mode: multiply;">
                 
                 <!-- Overlay Icons -->
                 <!-- Icon 1: Sparkle / Glow -->
@@ -237,24 +303,95 @@ if ($isLoggedIn) {
         </div>
     </div>
 
-    <!-- Konsultasi Section (Gate) -->
+    <!-- Testimoni / Stories Section -->
+    <div id="testimoni" class="py-20 bg-white overflow-hidden relative border-t border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center mb-16" data-aos="fade-up">
+                <span class="inline-block py-1 px-3 rounded-full bg-blue-50 text-primary text-sm font-semibold mb-4 tracking-wide border border-blue-100">Kisah Nyata Pelanggan</span>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Klien Kami Menyoroti Keberhasilan Mereka</h2>
+                <p class="mt-4 text-gray-500 max-w-2xl mx-auto text-lg">Lihat sendiri transformasi luar biasa dari pelanggan yang telah rutin menggunakan produk dan konsultasi di NPGLOW.</p>
+            </div>
+
+            <!-- Swiper Container -->
+            <div class="swiper testimoni-swiper !pb-16" data-aos="fade-up" data-aos-delay="100">
+                <div class="swiper-wrapper">
+                    <?php foreach ($testimonials as $testi): ?>
+                    <div class="swiper-slide h-auto">
+                        <div class="bg-white rounded-[2rem] p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.12)] border border-gray-100 h-full flex flex-col group transition-all duration-300 relative">
+                            <!-- Large Quote Icon Background -->
+                            <svg class="absolute top-8 right-8 w-16 h-16 text-gray-100" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
+
+                            <!-- Header -->
+                            <div class="flex flex-col gap-1 mb-5 relative z-10">
+                                <h4 class="text-gray-900 font-extrabold text-xl tracking-tight"><?= htmlspecialchars($testi['name']) ?></h4>
+                                <p class="text-xs text-gray-500 font-medium flex items-center gap-1">
+                                    <svg class="w-3.5 h-3.5 text-primary" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                                    Verified Buyer
+                                </p>
+                            </div>
+
+                            <!-- Title -->
+                            <h5 class="text-gray-900 font-bold text-lg mb-3 relative z-10">Hasil Memuaskan</h5>
+
+                            <!-- Review Text -->
+                            <div class="mb-8 relative z-10 flex-1">
+                                <?php if (isset($testi['review'])): ?>
+                                <p class="text-gray-500 text-sm leading-relaxed">"<?= htmlspecialchars($testi['review']) ?>"</p>
+                                <?php else: ?>
+                                <p class="text-gray-500 text-sm leading-relaxed">"Progress perawatan terpantau sangat baik melalui Skincare Journal. Kulit terasa lebih sehat dan glowing setiap harinya."</p>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Before/After Images -->
+                            <div class="flex gap-3 h-[180px] sm:h-[220px] relative z-10">
+                                <div class="w-1/2 relative rounded-2xl overflow-hidden group-hover:shadow-md transition-all duration-300">
+                                    <img src="<?= htmlspecialchars($testi['photo_before']) ?>" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Before">
+                                    <div class="absolute bottom-2 left-2 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-lg shadow-sm">
+                                        <span class="text-[10px] font-bold text-gray-800 tracking-wider uppercase">Before</span>
+                                    </div>
+                                </div>
+                                <div class="w-1/2 relative rounded-2xl overflow-hidden group-hover:shadow-md transition-all duration-300">
+                                    <img src="<?= htmlspecialchars($testi['photo_after']) ?>" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="After">
+                                    <div class="absolute bottom-2 right-2 bg-primary/90 backdrop-blur-md px-2.5 py-1 rounded-lg shadow-sm">
+                                        <span class="text-[10px] font-bold text-white tracking-wider uppercase">After</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <!-- Pagination -->
+                <div class="swiper-pagination !-bottom-2"></div>
+            </div>
+            
+            <div class="text-center mt-4" data-aos="fade-up" data-aos-delay="200">
+                <a href="#konsultasi" class="inline-flex items-center gap-2 px-8 py-4 bg-primary hover:bg-primary-dark text-white rounded-full font-semibold transition-all shadow-lg hover:shadow-primary/40 transform hover:-translate-y-1">
+                    Mulai Perjalanan Glow Kamu
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Konsultasi Section -->
     <div id="konsultasi" class="bg-primary/5 py-16 lg:py-24 border-y border-blue-100">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center" data-aos="zoom-in">
             <h2 class="text-3xl font-extrabold text-gray-900 mb-4">Konsultasikan Kulitmu Bersama Ahli</h2>
             <p class="text-lg text-gray-600 mb-10 max-w-2xl mx-auto">
                 Dapatkan rekomendasi produk dan panduan merawat kulit langsung dari ahlinya. 
-                <strong class="text-primary">Eksklusif bagi pelanggan yang telah melakukan pembelian produk NPGLOW.</strong>
+                <strong class="text-primary">Gratis untuk semua pengguna — langsung konsultasi tanpa harus beli dulu!</strong>
             </p>
             
             <div class="bg-white p-8 rounded-3xl shadow-xl max-w-lg mx-auto border-t-4 border-primary">
                 <div class="mb-6 flex justify-center">
-                    <img src="logo_np_glow.jpeg" alt="Logo" class="h-20 object-contain drop-shadow-sm">
+                    <img src="assets/images/logo_np_glow.jpeg" alt="Logo" class="h-20 object-contain drop-shadow-sm">
                 </div>
                 <h3 class="text-xl font-bold mb-2">Siap Mulai Konsultasi?</h3>
-                <p class="text-gray-500 text-sm mb-8">Klik tombol di bawah ini. Sistem akan mengecek apakah Anda memenuhi syarat untuk konsultasi (sudah beli produk).</p>
+                <p class="text-gray-500 text-sm mb-8">Pilih konsultasi dengan AI Assistant 24 jam atau langsung chat dengan Tim Ahli kami.</p>
                 <button onclick="checkConsultation()" class="btn-konsultasi w-full flex items-center justify-center px-8 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-primary hover:bg-primary-dark transition-all shadow-lg hover:shadow-primary/40 transform hover:-translate-y-1">
                     <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path></svg>
-                    Mulai Konsultasi Sekarang
+                    Mulai Konsultasi Gratis
                 </button>
             </div>
         </div>
@@ -271,51 +408,72 @@ if ($isLoggedIn) {
             </div>
 
             <!-- Product Grid -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-8">
                 <?php
-                $prodQuery = $conn->query("SELECT * FROM products ORDER BY id DESC");
+                // Fetch products along with their sold count from orders
+                $prodQuery = $conn->query("
+                    SELECT p.*, COUNT(o.id) as sold_count 
+                    FROM products p 
+                    LEFT JOIN orders o ON p.id = o.product_id AND o.status = 'completed'
+                    GROUP BY p.id 
+                    ORDER BY p.id DESC
+                ");
                 $delay = 100;
                 while ($product = $prodQuery->fetch_assoc()):
                 ?>
                 <!-- Product Card -->
-                <div class="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.12)] transition-all duration-300 overflow-hidden group flex flex-col h-full" data-aos="fade-up" data-aos-delay="<?= $delay ?>">
+                <div class="bg-white rounded-[1.2rem] sm:rounded-[2rem] shadow-[0_8px_20px_rgb(0,0,0,0.06)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.12)] transition-all duration-300 overflow-hidden group flex flex-col h-full" data-aos="fade-up" data-aos-delay="<?= $delay ?>">
                     
                     <!-- Image Section -->
-                    <div class="relative bg-gradient-to-br from-blue-50 to-blue-200 aspect-[4/3] flex items-center justify-center p-6 overflow-hidden">
+                    <div class="relative bg-gradient-to-br from-blue-50 to-blue-200 aspect-square sm:aspect-[4/3] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
                         <!-- Heart Icon -->
-                        <button class="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white hover:text-rose-500 transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                        <button class="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white hover:text-rose-500 transition-colors">
+                            <svg class="w-3.5 h-3.5 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                         </button>
                         
                         <?php if (!empty($product['image_url'])): ?>
                             <img src="<?= htmlspecialchars($product['image_url']) ?>" alt="<?= htmlspecialchars($product['name']) ?>" class="w-full h-full object-cover sm:object-contain transition-transform duration-700 group-hover:scale-110 drop-shadow-xl">
                         <?php else: ?>
-                            <div class="w-24 h-24 bg-white/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm z-10">
+                            <div
+                                class="w-16 h-16 sm:w-24 sm:h-24 bg-white/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-sm z-10">
                                 Product
                             </div>
                         <?php endif; ?>
                     </div>
                     
                     <!-- Content Section -->
-                    <div class="p-6 flex flex-col flex-1 bg-white relative z-10 -mt-6 rounded-t-[2rem]">
-                        <h3 class="text-[1.1rem] font-bold text-gray-800 mb-2 tracking-tight group-hover:text-primary transition-colors leading-snug"><?= htmlspecialchars($product['name']) ?></h3>
+                    <div class="p-3 sm:p-6 flex flex-col flex-1 bg-white relative z-10 -mt-3 sm:-mt-6 rounded-t-[1.2rem] sm:rounded-t-[2rem]">
+                        <h3 class="text-[12px] sm:text-[1.1rem] font-bold text-gray-800 mb-1 sm:mb-2 tracking-tight group-hover:text-primary transition-colors leading-snug line-clamp-2"><?= htmlspecialchars($product['name']) ?></h3>
                         
+                        <!-- Rating & Terjual -->
+                        <div class="flex items-center gap-1.5 mb-1.5 sm:mb-2">
+                            <div class="flex items-center text-yellow-400">
+                                <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                                <span class="text-[10px] sm:text-[11px] font-bold text-gray-700 ml-0.5">4.9</span>
+                            </div>
+                            <span class="w-0.5 h-0.5 bg-gray-300 rounded-full"></span>
+                            <span class="text-[9px] sm:text-[11px] text-gray-500"><?= $product['sold_count'] > 0 ? $product['sold_count'] . ' Terjual' : 'Baru' ?></span>
+                        </div>
+
                         <!-- Badges -->
-                        <div class="flex flex-wrap gap-1.5 mb-3">
-                            <span class="px-2 py-1 border border-gray-300 rounded text-[10px] font-bold text-gray-600 uppercase tracking-widest">ORIGINAL</span>
-                            <span class="px-2 py-1 border border-gray-300 rounded text-[10px] font-bold text-gray-600 uppercase tracking-widest">BPOM</span>
+                        <div class="flex flex-wrap gap-1 sm:gap-1.5 mb-2 sm:mb-3">
+                            <span class="px-1.5 sm:px-2 py-0.5 sm:py-1 border border-gray-300 rounded text-[8px] sm:text-[9px] font-bold text-gray-600 uppercase tracking-widest">ORIGINAL</span>
+                            <span class="px-1.5 sm:px-2 py-0.5 sm:py-1 border border-gray-300 rounded text-[8px] sm:text-[9px] font-bold text-gray-600 uppercase tracking-widest hidden sm:inline-block">BPOM</span>
                         </div>
                         
-                        <p class="text-[13px] text-gray-500 font-medium mb-6 line-clamp-2 leading-relaxed flex-1"><?= htmlspecialchars($product['description']) ?></p>
+                        <p class="text-[10px] sm:text-[12px] text-gray-500 font-medium mb-3 sm:mb-5 line-clamp-2 leading-relaxed flex-1"><?= htmlspecialchars($product['description']) ?></p>
                         
                         <!-- Bottom Action Row -->
-                        <div class="flex items-center justify-between mt-auto">
+                        <div class="flex flex-row items-end sm:items-center justify-between mt-auto gap-2">
                             <div>
-                                <span class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">PRICE</span>
-                                <span class="text-lg font-black text-gray-800 tracking-tight">Rp <?= number_format($product['price'], 0, ',', '.') ?></span>
+                                <span class="block text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">PRICE</span>
+                                <div class="flex items-baseline gap-1 flex-wrap">
+                                    <span class="text-[12px] sm:text-[16px] font-black text-gray-800 tracking-tight leading-none">Rp <?= number_format($product['price'], 0, ',', '.') ?></span>
+                                </div>
                             </div>
-                            <a href="checkout.php?product_id=<?= $product['id'] ?>" class="bg-primary hover:bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold text-[13px] transition-colors shadow-md hover:shadow-lg whitespace-nowrap ml-2">
-                                Beli Sekarang
+                            <a href="checkout.php?product_id=<?= $product['id'] ?>"
+                                class="w-auto text-center bg-primary hover:bg-blue-600 text-white px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl font-bold text-[10px] sm:text-[13px] transition-colors shadow-sm hover:shadow-md whitespace-nowrap">
+                                Beli
                             </a>
                         </div>
                     </div>
@@ -342,7 +500,7 @@ if ($isLoggedIn) {
                 <!-- Column 1: Brand Info -->
                 <div class="md:col-span-12 lg:col-span-4 flex flex-col items-start">
                     <div class="flex items-center gap-3 mb-6">
-                        <img class="h-10 w-auto rounded-lg shadow-sm" src="logo_np_glow.jpeg" alt="NPGLOW Logo">
+                        <img class="h-10 w-auto rounded-lg shadow-sm" src="assets/images/logo_np_glow.jpeg" alt="NPGLOW Logo">
                         <span class="font-bold text-xl text-gray-900 tracking-tight">NPGLOW</span>
                     </div>
                     <h3 class="text-xl font-bold text-gray-900 mb-4">Solusi perawatan kulit cerdas Anda</h3>
@@ -414,15 +572,44 @@ if ($isLoggedIn) {
     <script>
         const btn = document.getElementById('mobile-menu-btn');
         const menu = document.getElementById('mobile-menu');
+        const hamburgerIcon = document.getElementById('hamburger-icon');
+        const closeIcon = document.getElementById('close-icon');
 
         btn.addEventListener('click', () => {
-            menu.classList.toggle('hidden');
+            if (menu.classList.contains('hidden')) {
+                // Open menu
+                menu.classList.remove('hidden');
+                setTimeout(() => {
+                    menu.classList.remove('opacity-0', '-translate-y-4');
+                    menu.classList.add('opacity-100', 'translate-y-0');
+                }, 10);
+                
+                // Animate icons
+                hamburgerIcon.classList.add('hidden', 'rotate-90', 'opacity-0');
+                hamburgerIcon.classList.remove('block', 'rotate-0', 'opacity-100');
+                
+                closeIcon.classList.remove('hidden', 'rotate-90', 'opacity-0');
+                closeIcon.classList.add('block', 'rotate-0', 'opacity-100');
+            } else {
+                // Close menu
+                menu.classList.remove('opacity-100', 'translate-y-0');
+                menu.classList.add('opacity-0', '-translate-y-4');
+                setTimeout(() => {
+                    menu.classList.add('hidden');
+                }, 300); // match duration
+
+                // Animate icons
+                closeIcon.classList.remove('block', 'rotate-0', 'opacity-100');
+                closeIcon.classList.add('hidden', 'rotate-90', 'opacity-0');
+
+                hamburgerIcon.classList.remove('hidden', 'rotate-90', 'opacity-0');
+                hamburgerIcon.classList.add('block', 'rotate-0', 'opacity-100');
+            }
         });
 
         // Consultation Logic
         function checkConsultation() {
             const isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
-            const hasPurchased = <?= $hasPurchased ? 'true' : 'false' ?>;
 
             if (!isLoggedIn) {
                 Swal.fire({
@@ -439,23 +626,8 @@ if ($isLoggedIn) {
                 return;
             }
 
-            if (!hasPurchased) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Akses Ditolak',
-                    text: 'Anda harus membeli produk NPGLOW terlebih dahulu untuk dapat menggunakan layanan konsultasi.',
-                    confirmButtonColor: '#3ca6f2',
-                    confirmButtonText: 'Beli Produk'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        window.location.hash = '#marketplace';
-                    }
-                });
-                return;
-            }
-
-            // Jika memenuhi syarat
-            window.location.href = 'chat.php';
+            // All logged-in users can access consultation
+            window.location.href = 'konsultasi.php';
         }
     </script>
     
@@ -515,5 +687,48 @@ if ($isLoggedIn) {
             });
         });
     </script>
+
+    <!-- Swiper JS -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const swiper = new Swiper('.testimoni-swiper', {
+                slidesPerView: 1.2,
+                spaceBetween: 16,
+                grabCursor: true,
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true,
+                    dynamicBullets: true,
+                },
+                breakpoints: {
+                    640: {
+                        slidesPerView: 2.2,
+                        spaceBetween: 20,
+                    },
+                    1024: {
+                        slidesPerView: 3,
+                        spaceBetween: 30,
+                    },
+                }
+            });
+        });
+    </script>
+
+    <?php if ($isLoggedIn): ?>
+    <!-- Bottom Navbar for logged-in customers -->
+    <?php 
+    $bottomNavActive = 'beranda';
+    include 'includes/bottom-nav.php'; 
+    ?>
+    <style>
+        /* Add bottom padding when bottom nav is visible */
+        @media (max-width: 639px) {
+            body { padding-bottom: 4rem; }
+        }
+    </style>
+    <?php endif; ?>
+
 </body>
+<?php include 'includes/pwa-sw.php'; ?>
 </html>

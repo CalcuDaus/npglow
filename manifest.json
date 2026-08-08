@@ -1,0 +1,71 @@
+{
+    "name": "NPGLOW - Konsultasi & Belanja Skincare",
+    "short_name": "NPGLOW",
+    "description": "Aplikasi Konsultasi Kulit dengan Ahli & Belanja Produk Skincare Terpercaya",
+    "start_url": "/npglow/index.php",
+    "scope": "/npglow/",
+    "id": "/npglow/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#3ca6f2",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/npglow/assets/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/npglow/assets/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/npglow/assets/icons/icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/npglow/assets/icons/icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Dashboard",
+            "short_name": "Dashboard",
+            "description": "Buka Dashboard Pengguna",
+            "url": "/npglow/dashboard.php",
+            "icons": [{ "src": "/npglow/assets/icons/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Konsultasi Ahli",
+            "short_name": "Konsultasi",
+            "description": "Konsultasi Langsung dengan Dokter Ahli",
+            "url": "/npglow/konsultasi.php",
+            "icons": [{ "src": "/npglow/assets/icons/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Chat AI Assistant",
+            "short_name": "Chat AI",
+            "description": "Tanya rekomendasi skincare dengan AI NPGLOW",
+            "url": "/npglow/chat-ai.php",
+            "icons": [{ "src": "/npglow/assets/icons/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Skincare Journal",
+            "short_name": "Journal",
+            "description": "Pantau progres kulit wajah kamu",
+            "url": "/npglow/journal.php",
+            "icons": [{ "src": "/npglow/assets/icons/icon-192.png", "sizes": "192x192" }]
+        }
+    ],
+    "categories": ["shopping", "lifestyle", "beauty", "health"],
+    "lang": "id",
+    "dir": "ltr"
+}
