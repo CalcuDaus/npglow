@@ -55,15 +55,19 @@ if ($action === 'set_referral') {
         exit();
     }
 
-    $ok = set_user_referral($conn, $userId, $resellerUserId);
-    echo json_encode([
-        'success' => $ok,
-        'store' => [
-            'store_name' => $store['store_name'],
-            'referral_code' => $store['referral_code'],
-            'city' => $store['city']
-        ]
-    ]);
+    $result = link_user_to_reseller($conn, $userId, $store['referral_code']);
+    if ($result === true) {
+        echo json_encode([
+            'success' => true,
+            'store' => [
+                'store_name' => $store['store_name'],
+                'referral_code' => $store['referral_code'],
+                'city' => $store['city']
+            ]
+        ]);
+    } else {
+        echo json_encode(['success' => false, 'error' => $result]);
+    }
     exit();
 }
 
@@ -74,7 +78,7 @@ if ($action === 'clear_referral') {
         exit();
     }
     $userId = (int)$_SESSION['user_id'];
-    $ok = set_user_referral($conn, $userId, null);
+    $ok = unlink_user_from_reseller($conn, $userId);
     echo json_encode(['success' => $ok]);
     exit();
 }

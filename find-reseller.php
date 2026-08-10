@@ -166,7 +166,7 @@ $allStores = $storesQuery ? $storesQuery->fetch_all(MYSQLI_ASSOC) : [];
         // Initialize Map
         function initMap() {
             // Default center of Indonesia
-            map = L.map('resellerMap').setView([-2.5489, 118.0149], 5);
+            map = L.map('resellerMap', { attributionControl: false }).setView([-2.5489, 118.0149], 5);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
@@ -194,7 +194,24 @@ $allStores = $storesQuery ? $storesQuery->fetch_all(MYSQLI_ASSOC) : [];
                     bounds.push([lat, lng]);
 
                     const isCurrent = store.id == currentStoreId;
-                    const marker = L.marker([lat, lng]).addTo(markersGroup);
+                    
+                    const customIcon = L.divIcon({
+                        className: 'bg-transparent border-0',
+                        html: `
+                            <div class="relative flex flex-col items-center">
+                                ${store.distance_km !== undefined ? `<div class="absolute -top-7 whitespace-nowrap bg-white text-primary text-[10px] font-extrabold px-2 py-0.5 rounded-md shadow-sm border border-gray-100">${store.distance_km} km</div>` : ''}
+                                <div class="w-10 h-10 rounded-full border-[3px] ${isCurrent ? 'border-emerald-500' : 'border-white'} shadow-md bg-white overflow-hidden flex items-center justify-center relative z-10">
+                                    <img src="assets/icons/icon-192.png" class="w-full h-full object-cover" alt="NPGLOW">
+                                </div>
+                                <div class="w-0 h-0 border-l-[6px] border-r-[6px] border-l-transparent border-r-transparent border-t-[8px] ${isCurrent ? 'border-t-emerald-500' : 'border-t-white'} -mt-1 drop-shadow-sm relative z-0"></div>
+                            </div>
+                        `,
+                        iconSize: [40, 50],
+                        iconAnchor: [20, 50],
+                        popupAnchor: [0, -50]
+                    });
+
+                    const marker = L.marker([lat, lng], { icon: customIcon }).addTo(markersGroup);
 
                     const popupContent = `
                         <div class="p-1 max-w-[220px]">

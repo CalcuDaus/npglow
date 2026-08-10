@@ -168,6 +168,12 @@ if (!function_exists('npglow_icon')) {
                 <path d="M12 2a5 5 0 100 10 5 5 0 000-10zM4 20a8 8 0 1116 0H4z"/>
             </svg>',
 
+            // Download
+            'download' => '<svg class="' . $class . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 4V16M12 16L7 11M12 16L17 11" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M4 17V18C4 19.1046 4.89543 20 6 20H18C19.1046 20 20 19.1046 20 18V17" ' . ($duotone ? 'fill="currentColor" fill-opacity="0.14" ' : '') . 'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>',
+
             // Truck / Shipping (🚚)
             'truck' => '<svg class="' . $class . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
                 <path d="M1 3H16V16H1V3Z" ' . ($duotone ? 'fill="currentColor" fill-opacity="0.14" ' : '') . 'stroke-width="1.8" stroke-linejoin="round"/>

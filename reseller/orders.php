@@ -278,7 +278,7 @@ if ($cRes) {
                             </div>
                             <div class="flex items-center gap-2">
                                 <span class="text-xs font-bold px-3 py-1 rounded-full <?= $statusMeta['badge_class'] ?>">
-                                    <?= $statusMeta['status_label'] ?>
+                                    <?= $statusMeta['label'] ?>
                                 </span>
                             </div>
                         </div>

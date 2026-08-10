@@ -82,9 +82,12 @@ $_userName = $_SESSION['user_name'] ?? 'Reseller';
                     <span>Produk Saya</span>
                 </a>
 
-                <a href="orders.php" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all <?= $activeNav === 'orders' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-300 hover:text-white hover:bg-slate-800/80' ?>">
-                    <svg class="w-5 h-5 <?= $activeNav === 'orders' ? 'text-white' : 'text-amber-400' ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-                    <span>Pesanan Masuk</span>
+                <a href="orders.php" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all <?= $activeNav === 'orders' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-300 hover:text-white hover:bg-slate-800/80' ?>">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5 <?= $activeNav === 'orders' ? 'text-white' : 'text-amber-400' ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                        <span>Pesanan Masuk</span>
+                    </div>
+                    <span id="sidebar-order-badge" class="hidden bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm min-w-[20px] text-center transition-all duration-300">0</span>
                 </a>
             </nav>
         </div>
@@ -143,4 +146,33 @@ $_userName = $_SESSION['user_name'] ?? 'Reseller';
             }, 2000);
         });
     }
+
+    // Realtime badge updates for active orders
+    async function updateOrderBadge() {
+        try {
+            const r = await fetch('../api/reseller-orders-count.php');
+            const data = await r.json();
+            const badge = document.getElementById('sidebar-order-badge');
+            if (data.success && data.count > 0 && badge) {
+                badge.textContent = data.count;
+                badge.classList.remove('hidden');
+                
+                // Add a small scale bump for new orders
+                const prevCount = parseInt(badge.dataset.count || '0');
+                if (data.count > prevCount && prevCount > 0) {
+                    badge.classList.add('scale-125');
+                    setTimeout(() => badge.classList.remove('scale-125'), 300);
+                }
+                badge.dataset.count = data.count;
+            } else if (badge) {
+                badge.classList.add('hidden');
+                badge.dataset.count = '0';
+            }
+        } catch(e) {}
+    }
+    
+    // Check every 10 seconds
+    setInterval(updateOrderBadge, 10000);
+    // Initial check on load
+    document.addEventListener('DOMContentLoaded', updateOrderBadge);
 </script>

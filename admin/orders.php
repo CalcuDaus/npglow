@@ -134,7 +134,7 @@ if (!in_array($limit, [5, 10, 25, 50, 100])) {
 $page = max(1, (int)($_GET['page'] ?? 1));
 
 // Build dynamic WHERE clause
-$whereClauses = [];
+$whereClauses = ["o.reseller_store_id IS NULL"];
 $params = [];
 $paramTypes = "";
 
@@ -204,12 +204,12 @@ $stmt->execute();
 $orders = $stmt->get_result();
 
 // Counts for filter pills
-$countTotal = $conn->query("SELECT COUNT(*) as c FROM orders")->fetch_assoc()['c'] ?? 0;
-$countWaiting = $conn->query("SELECT COUNT(*) as c FROM orders WHERE payment_status = 'waiting_verification'")->fetch_assoc()['c'] ?? 0;
-$countProcessing = $conn->query("SELECT COUNT(*) as c FROM orders WHERE order_status = 'processing'")->fetch_assoc()['c'] ?? 0;
-$countShipped = $conn->query("SELECT COUNT(*) as c FROM orders WHERE order_status = 'shipped'")->fetch_assoc()['c'] ?? 0;
-$countDelivered = $conn->query("SELECT COUNT(*) as c FROM orders WHERE order_status = 'delivered'")->fetch_assoc()['c'] ?? 0;
-$countUnpaid = $conn->query("SELECT COUNT(*) as c FROM orders WHERE order_status = 'unpaid' OR payment_status = 'pending'")->fetch_assoc()['c'] ?? 0;
+$countTotal = $conn->query("SELECT COUNT(*) as c FROM orders WHERE reseller_store_id IS NULL")->fetch_assoc()['c'] ?? 0;
+$countWaiting = $conn->query("SELECT COUNT(*) as c FROM orders WHERE payment_status = 'waiting_verification' AND reseller_store_id IS NULL")->fetch_assoc()['c'] ?? 0;
+$countProcessing = $conn->query("SELECT COUNT(*) as c FROM orders WHERE order_status = 'processing' AND reseller_store_id IS NULL")->fetch_assoc()['c'] ?? 0;
+$countShipped = $conn->query("SELECT COUNT(*) as c FROM orders WHERE order_status = 'shipped' AND reseller_store_id IS NULL")->fetch_assoc()['c'] ?? 0;
+$countDelivered = $conn->query("SELECT COUNT(*) as c FROM orders WHERE order_status = 'delivered' AND reseller_store_id IS NULL")->fetch_assoc()['c'] ?? 0;
+$countUnpaid = $conn->query("SELECT COUNT(*) as c FROM orders WHERE (order_status = 'unpaid' OR payment_status = 'pending') AND reseller_store_id IS NULL")->fetch_assoc()['c'] ?? 0;
 
 // Helper to generate pagination URLs
 function buildPaginationUrl($targetPage, $status, $search, $limit) {

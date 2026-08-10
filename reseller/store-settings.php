@@ -252,7 +252,7 @@ $hasCoords = !empty($store['latitude']) && !empty($store['longitude']);
         const initialLng = <?= $currentLng ?>;
         const hasSavedCoords = <?= $hasCoords ? 'true' : 'false' ?>;
 
-        const map = L.map('map').setView([initialLat, initialLng], hasSavedCoords ? 14 : 10);
+        const map = L.map('map', { attributionControl: false }).setView([initialLat, initialLng], hasSavedCoords ? 14 : 10);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
