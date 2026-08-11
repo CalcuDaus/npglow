@@ -43,24 +43,37 @@ $activeNav = 'reports';
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- HTML2PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
         body { font-family: 'Inter', sans-serif; }
         
         /* Print Styles */
         @media print {
-            body { background: white !important; }
-            #sidebarBackdrop, #adminSidebar, .no-print { display: none !important; }
+            body, html { background: white !important; height: auto !important; overflow: visible !important; display: block !important; }
+            header, #sidebarBackdrop, #adminSidebar, .no-print { display: none !important; }
             .print-only { display: block !important; }
             .shadow-sm, .shadow-md, .shadow-lg { box-shadow: none !important; border: 1px solid #e5e7eb !important; }
+            
+            /* Fix cutoff issues by overriding h-screen, flex, and overflow */
+            .flex-1, .h-screen, .overflow-hidden, .overflow-y-auto {
+                height: auto !important;
+                overflow: visible !important;
+                display: block !important;
+            }
+            main#report-container {
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: visible !important;
+            }
+            /* Prevent charts and table breaking across pages weirdly */
+            .bg-white { page-break-inside: avoid; margin-bottom: 20px; }
+            canvas { max-width: 100% !important; height: auto !important; }
         }
         .print-container { 
             width: 100% !important; 
             max-width: none !important; 
             margin: 0 !important; 
-            padding: 20px !important;
+            padding: 0 !important;
             background: white !important;
         }
         .print-only { display: none; }
@@ -76,9 +89,9 @@ $activeNav = 'reports';
         <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8" id="report-container">
             
             <!-- Header Print Area (Hidden normally, shown in PDF/Print) -->
-            <div id="print-header" class="hidden mb-8 border-b-2 border-slate-800 pb-4">
+            <div id="print-header" class="print-only mb-8 border-b-2 border-slate-800 pb-4">
                 <div class="flex items-center gap-4">
-                    <img id="print-logo" src="../assets/icons/icon-192.png" alt="NPGLOW Logo" class="w-16 h-16 rounded-xl object-contain">
+                    <img id="print-logo" src="../assets/images/logo_np_glow.jpeg" alt="NPGLOW Logo" class="w-16 h-16 rounded-xl object-contain">
                     <div>
                         <h1 class="text-2xl font-black text-slate-900 leading-tight">NPGLOW OFFICIAL</h1>
                         <p class="text-sm font-semibold text-slate-500">Laporan <span id="print-tab-name">Arus Kas</span></p>
@@ -120,8 +133,8 @@ $activeNav = 'reports';
                             <?= npglow_icon('download', 'w-5 h-5') ?>
                         </button>
                         <div class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 overflow-hidden transform origin-top-right scale-95 group-hover:scale-100">
-                            <button onclick="exportToPDF()" class="w-full text-left px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                                <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg> Export PDF
+                            <button onclick="window.print()" class="w-full text-left px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Print Laporan
                             </button>
                             <button onclick="exportToCSV()" class="w-full text-left px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 border-t border-slate-100">
                                 <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 4v12a1 1 0 001 1h8a1 1 0 001-1V4a1 1 0 00-1-1H6a1 1 0 00-1 1zm2 1h6v2H7V5zm0 4h6v2H7V9zm0 4h6v2H7v-2z" clip-rule="evenodd"></path></svg> Export CSV
@@ -713,59 +726,6 @@ $activeNav = 'reports';
                 `;
             });
         }
-    }
-
-    // Export PDF
-    function exportToPDF() {
-        const element = document.getElementById('report-container');
-        const printHeader = document.getElementById('print-header');
-        const noPrintElements = document.querySelectorAll('.no-print');
-        
-        // Fix Logo Path for html2canvas
-        const logoImg = document.getElementById('print-logo');
-        if (logoImg) logoImg.src = window.location.origin + '/npglow/assets/icons/icon-192.png';
-        
-        // Prepare for PDF rendering
-        printHeader.classList.remove('hidden');
-        noPrintElements.forEach(el => el.style.display = 'none');
-        element.classList.add('print-container');
-        
-        // Force absolute positioning and sizing to prevent any scroll offsets or margin centering issues
-        const originalPos = element.style.position;
-        const originalLeft = element.style.left;
-        const originalTop = element.style.top;
-        const originalWidth = element.style.width;
-        const originalMaxWidth = element.style.maxWidth;
-        
-        element.style.position = 'absolute';
-        element.style.left = '0';
-        element.style.top = '0';
-        element.style.width = '800px';
-        element.style.maxWidth = '800px';
-        
-        const opt = {
-            margin:       10,
-            filename:     `Laporan-NPGLOW-${currentTab}-${dateStart.toISOString().split('T')[0]}.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
-        html2pdf().set(opt).from(element).save().then(() => {
-            // Restore original state
-            printHeader.classList.add('hidden');
-            noPrintElements.forEach(el => el.style.display = '');
-            element.classList.remove('print-container');
-            
-            element.style.position = originalPos;
-            element.style.left = originalLeft;
-            element.style.top = originalTop;
-            element.style.width = originalWidth;
-            element.style.maxWidth = originalMaxWidth;
-            
-            // Revert logo path to relative
-            if (logoImg) logoImg.src = '../assets/icons/icon-192.png';
-        });
     }
 
     // Export CSV
